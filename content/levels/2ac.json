@@ -1,0 +1,14 @@
+{
+  "id": "2ac",
+  "name": {
+    "fr": "2ème Année Collège",
+    "ar": "السنة الثانية إعدادي"
+  },
+  "shortName": {
+    "fr": "2AC",
+    "ar": "2إع"
+  },
+  "icon": "⚡",
+  "color": "#2196F3",
+  "gradient": "linear-gradient(135deg, #1E88E5, #42A5F5)"
+}

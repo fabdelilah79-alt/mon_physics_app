@@ -1,0 +1,14 @@
+{
+  "id": "3ac",
+  "name": {
+    "fr": "3ème Année Collège",
+    "ar": "السنة الثالثة إعدادي"
+  },
+  "shortName": {
+    "fr": "3AC",
+    "ar": "3إع"
+  },
+  "icon": "🧲",
+  "color": "#FF9800",
+  "gradient": "linear-gradient(135deg, #F57C00, #FFB74D)"
+}

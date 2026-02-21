@@ -1,0 +1,471 @@
+{
+  "id": "1ac_electricite",
+  "title": {
+    "fr": "L'électricité autour de nous",
+    "ar": "الكهرباء من حولنا"
+  },
+  "description": {
+    "fr": "Découvre comment convertir différentes formes d'énergie en électricité.",
+    "ar": "اكتشف كيف يتم تحويل أشكال مختلفة من الطاقة إلى كهرباء"
+  },
+  "icon": "⚡",
+  "activities": [
+    {
+      "id": "1ac_electricite_alternateur",
+      "title": {
+        "fr": "Activité 1 : L'Alternateur (Énergie Mécanique)",
+        "ar": "النشاط 1: المولد الكهربائي (الطاقة الميكانيكية)"
+      },
+      "predictions": [
+        {
+          "question": {
+            "fr": "Dans une centrale électrique ou une éolienne, qu'est-ce qui produit réellement le courant électrique ?",
+            "ar": "في محطة كهرباء أو توربينة رياح، ما الذي ينتج التيار الكهربائي فعليًا؟"
+          },
+          "type": "mcq",
+          "choices": [
+            {
+              "id": "a",
+              "text": {
+                "fr": "Le vent ou l'eau est stocké dans des batteries géantes",
+                "ar": "الرياح أو الماء مخزنة في بطاريات عملاقة"
+              }
+            },
+            {
+              "id": "b",
+              "text": {
+                "fr": "Un aimant tourne à l'intérieur d'une bobine de fil de cuivre",
+                "ar": "مغناطيس يدور داخل ملف من الأسلاك النحاسية"
+              }
+            },
+            {
+              "id": "c",
+              "text": {
+                "fr": "L'électricité est créée par le frottement de l'air sur les pales",
+                "ar": "الكهرباء تنتج من احتكاك الهواء بالشفرات"
+              }
+            }
+          ],
+          "correctAnswer": "b"
+        }
+      ],
+      "simulation": {
+        "file": "simulations/alternateur_3d_sim.html",
+        "instructions": {
+          "fr": "Explore les 3 modes de l'alternateur : Éolienne (vent), Chute d'eau (turbine hydraulique) et Vapeur. Observe comment le mouvement fait tourner l'alternateur !",
+          "ar": "استكشف الأوضاع الثلاثة للمولد: الرياح، شلال الماء، والبخار. لاحظ كيف تدير الحركة المولد!"
+        }
+      },
+      "explanation": {
+        "summary": {
+          "fr": "<p>**L'Alternateur : Conversion de l'Énergie Mécanique en Électricité** </p><p>**Principe de fonctionnement :**</p><p> • L'alternateur est composé de deux parties principales : </p><p>- Le **Rotor** : partie mobile avec un aimant</p><p>- Le **Stator** : partie fixe avec une bobine de fil de cuivre </p><p>**Comment ça marche ?**</p><p>• Le mouvement (vent, eau, vapeur) fait tourner le rotor</p><p>• La rotation de l'aimant dans la bobine crée un courant électrique </p><p>• C'est le principe de **l'induction électromagnétique**</p><p><br></p><p> **Applications :** </p><p>• Éoliennes : le vent fait tourner les pales </p><p>• Barrages hydroélectriques : l'eau fait tourner la turbine </p><p>• Centrales thermiques : la vapeur d'eau fait tourner la turbine </p><p>📌 **Conclusion** : L'alternateur convertit le mouvement (énergie mécanique) en électricité. C'est le système le plus utilisé au monde pour produire de l'électricité !</p>",
+          "ar": "<p class=\"ql-direction-rtl ql-align-right\">**المولد الكهربائي: تحويل الطاقة الميكانيكية إلى كهرباء** </p><p class=\"ql-direction-rtl ql-align-right\">**مبدأ العمل:**</p><p class=\"ql-direction-rtl ql-align-right\"> • يتكون المولد من جزأين رئيسيين: </p><p class=\"ql-direction-rtl ql-align-right\">- **الدوار**: الجزء المتحرك مع مغناطيس </p><p class=\"ql-direction-rtl ql-align-right\">- **الثابت**: الجزء الثابت مع ملف من الأسلاك النحاسية </p><p class=\"ql-direction-rtl ql-align-right\">**كيف يعمل؟**</p><p class=\"ql-direction-rtl ql-align-right\"> • الحركة (الرياح، الماء، البخار) تدير الدوار</p><p class=\"ql-direction-rtl ql-align-right\"> • دوران المغناطيس داخل الملف يولد تيارًا كهربائيًا</p><p class=\"ql-direction-rtl ql-align-right\"> • هذا هو مبدأ **الحث الكهرومغناطيسي**</p><p class=\"ql-direction-rtl ql-align-right\"> **التطبيقات:** </p><p class=\"ql-direction-rtl ql-align-right\">• توربينات الرياح: الرياح تدير الشفرات</p><p class=\"ql-direction-rtl ql-align-right\">• السدود الكهرومائية: الماء يدير التوربين</p><p class=\"ql-direction-rtl ql-align-right\"> • المحطات الحرارية: بخار الماء يدير التوربين</p><p class=\"ql-direction-rtl ql-align-right\"> 📌 **الخلاصة**: المولد يحول الحركة (الطاقة الميكانيكية) إلى كهرباء. هو النظام الأكثر استخدامًا في العالم لإنتاج الكهرباء!</p>"
+        },
+        "feedback": {
+          "correct": {
+            "fr": "🎉 Parfait ! Tu as compris que c'est le mouvement de l'aimant dans la bobine qui crée le courant. C'est le principe de l'induction électromagnétique !",
+            "ar": "🎉 ممتاز! فهمت أن حركة المغناطيس في الملف هي التي تولد التيار. هذا هو مبدأ الحث الكهرومغناطيسي!"
+          },
+          "incorrect": {
+            "fr": "🤔 Pas tout à fait ! La simulation t'a montré que c'est le **mouvement** du rotor (l'aimant) qui crée l'électricité, pas le stockage ou le frottement.",
+            "ar": "🤔 ليس تمامًا! أظهرت لك المحاكاة أن **حركة** الدوار (المغناطيس) هي التي تولد الكهرباء، وليس التخزين أو الاحتكاك."
+          }
+        }
+      },
+      "quiz": {
+        "questions": [
+          {
+            "question": {
+              "fr": "Quelles sont les deux parties principales d'un alternateur ?",
+              "ar": "ما هما الجزءان الرئيسيان للمولد الكهربائي؟"
+            },
+            "type": "mcq",
+            "choices": [
+              {
+                "id": "a",
+                "text": {
+                  "fr": "Rotor et Stator",
+                  "ar": "الدوار والثابت"
+                }
+              },
+              {
+                "id": "b",
+                "text": {
+                  "fr": "Pile et Lampe",
+                  "ar": "البطارية والمصباح"
+                }
+              },
+              {
+                "id": "c",
+                "text": {
+                  "fr": "Panneau et Cellule",
+                  "ar": "اللوح والخلية"
+                }
+              }
+            ],
+            "correctAnswer": "a"
+          },
+          {
+            "question": {
+              "fr": "Dans un alternateur, quelle est la partie qui tourne ?",
+              "ar": "في المولد الكهربائي، أي جزء يدور؟"
+            },
+            "type": "mcq",
+            "choices": [
+              {
+                "id": "a",
+                "text": {
+                  "fr": "Le Stator",
+                  "ar": "الثابت"
+                }
+              },
+              {
+                "id": "b",
+                "text": {
+                  "fr": "Le Rotor",
+                  "ar": "الدوار"
+                }
+              },
+              {
+                "id": "c",
+                "text": {
+                  "fr": "La lampe",
+                  "ar": "المصباح"
+                }
+              }
+            ],
+            "correctAnswer": "b"
+          },
+          {
+            "question": {
+              "fr": "Quel type d'énergie l'alternateur convertit-il en électricité ?",
+              "ar": "أي نوع من الطاقة يحوله المولد إلى كهرباء؟"
+            },
+            "type": "mcq",
+            "choices": [
+              {
+                "id": "a",
+                "text": {
+                  "fr": "Énergie mécanique (mouvement)",
+                  "ar": "الطاقة الميكانيكية (الحركة)"
+                }
+              },
+              {
+                "id": "b",
+                "text": {
+                  "fr": "Énergie chimique",
+                  "ar": "الطاقة الكيميائية"
+                }
+              },
+              {
+                "id": "c",
+                "text": {
+                  "fr": "Énergie thermique",
+                  "ar": "الطاقة الحرارية"
+                }
+              }
+            ],
+            "correctAnswer": "a"
+          }
+        ]
+      }
+    },
+    {
+      "id": "1ac_electricite_solaire",
+      "title": {
+        "fr": "Activité 2 : Le Panneau Solaire (Énergie Solaire)",
+        "ar": "النشاط 2: اللوح الشمسي (الطاقة الشمسية)"
+      },
+      "predictions": [
+        {
+          "question": {
+            "fr": "Comment un panneau solaire fabrique-t-il de l'électricité ?",
+            "ar": "كيف ينتج اللوح الشمسي الكهرباء؟"
+          },
+          "type": "mcq",
+          "choices": [
+            {
+              "id": "a",
+              "text": {
+                "fr": "Il utilise la chaleur du soleil pour faire bouillir de l'eau",
+                "ar": "يستخدم حرارة الشمس لغليان الماء"
+              }
+            },
+            {
+              "id": "b",
+              "text": {
+                "fr": "Il capte la lumière du soleil et la transforme directement en électricité",
+                "ar": "يلتقط ضوء الشمس ويحوله مباشرة إلى كهرباء"
+              }
+            },
+            {
+              "id": "c",
+              "text": {
+                "fr": "Il stocke la lumière le jour pour la relâcher la nuit",
+                "ar": "يخزن الضوء نهارًا ويطلقه ليلاً"
+              }
+            }
+          ],
+          "correctAnswer": "b"
+        }
+      ],
+      "simulation": {
+        "file": "simulations/solaire_sim.html",
+        "instructions": {
+          "fr": "Change le moment de la journée (Nuit/Jour) et la météo (Ensoleillé/Nuageux). Observe comment la lumière affecte la production d'électricité !",
+          "ar": "غيّر وقت اليوم (ليل/نهار) والطقس (مشمس/غائم). لاحظ كيف يؤثر الضوء على إنتاج الكهرباء!"
+        }
+      },
+      "explanation": {
+        "summary": {
+          "fr": "**Le Panneau Solaire : Conversion de l'Énergie Solaire en Électricité**\n\n**Principe de fonctionnement :**\n• Le panneau solaire photovoltaïque convertit directement la **lumière** en électricité\n• ATTENTION : Ce n'est PAS la chaleur qui compte, mais la **lumière** !\n\n**Comment ça marche ?**\n• Les cellules photovoltaïques captent les photons (particules de lumière)\n• Ces photons libèrent des électrons\n• Les électrons circulent et créent un courant électrique\n\n**Caractéristiques uniques :**\n• ✅ Pas de pièces mobiles (silencieux)\n• ✅ Énergie renouvelable et propre\n• ⚠️ Ne fonctionne que le jour\n• ⚠️ Moins efficace par temps nuageux\n\n📌 **Conclusion** : Le panneau solaire est le seul système qui convertit **directement** la lumière en électricité, sans mouvement ni réaction chimique !",
+          "ar": "**اللوح الشمسي: تحويل الطاقة الشمسية إلى كهرباء**\n\n**مبدأ العمل:**\n• اللوح الشمسي الكهروضوئي يحول **الضوء** مباشرة إلى كهرباء\n• تنبيه: ليست **الحرارة** هي المهمة، بل **الضوء**!\n\n**كيف يعمل؟**\n• الخلايا الكهروضوئية تلتقط الفوتونات (جسيمات الضوء)\n• هذه الفوتونات تحرر الإلكترونات\n• تدور الإلكترونات وتولد تيارًا كهربائيًا\n\n**خصائص فريدة:**\n• ✅ لا أجزاء متحركة (صامت)\n• ✅ طاقة متجددة ونظيفة\n• ⚠️ يعمل فقط في النهار\n• ⚠️ أقل كفاءة في الطقس الغائم\n\n📌 **الخلاصة**: اللوح الشمسي هو النظام الوحيد الذي يحول **مباشرة** الضوء إلى كهرباء، بدون حركة أو تفاعل كيميائي!"
+        },
+        "feedback": {
+          "correct": {
+            "fr": "🎉 Bravo ! Tu as bien compris que le panneau solaire capte la **lumière** (pas la chaleur) et la transforme directement en électricité !",
+            "ar": "🎉 أحسنت! فهمت أن اللوح الشمسي يلتقط **الضوء** (وليس الحرارة) ويحوله مباشرة إلى كهرباء!"
+          },
+          "incorrect": {
+            "fr": "🤔 Attention ! La simulation a montré que c'est la **lumière** du soleil qui compte, pas la chaleur. Le panneau ne stocke pas non plus l'énergie (c'est le rôle des batteries).",
+            "ar": "🤔 انتبه! أظهرت المحاكاة أن **ضوء** الشمس هو المهم، وليس الحرارة. اللوح لا يخزن الطاقة أيضًا (هذا دور البطاريات)."
+          }
+        }
+      },
+      "quiz": {
+        "questions": [
+          {
+            "question": {
+              "fr": "Le panneau solaire photovoltaïque utilise la chaleur du soleil pour produire de l'électricité.",
+              "ar": "يستخدم اللوح الشمسي الكهروضوئي حرارة الشمس لإنتاج الكهرباء."
+            },
+            "type": "truefalse",
+            "correctAnswer": "false"
+          },
+          {
+            "question": {
+              "fr": "Quel est le seul dispositif qui ne nécessite PAS de pièces mobiles ?",
+              "ar": "أي جهاز لا يحتاج إلى أجزاء متحركة؟"
+            },
+            "type": "mcq",
+            "choices": [
+              {
+                "id": "a",
+                "text": {
+                  "fr": "L'alternateur",
+                  "ar": "المولد الكهربائي"
+                }
+              },
+              {
+                "id": "b",
+                "text": {
+                  "fr": "Le panneau solaire",
+                  "ar": "اللوح الشمسي"
+                }
+              },
+              {
+                "id": "c",
+                "text": {
+                  "fr": "L'éolienne",
+                  "ar": "توربينة الرياح"
+                }
+              }
+            ],
+            "correctAnswer": "b"
+          },
+          {
+            "question": {
+              "fr": "Pourquoi le panneau solaire ne produit-il pas d'électricité la nuit ?",
+              "ar": "لماذا لا ينتج اللوح الشمسي كهرباء في الليل؟"
+            },
+            "type": "mcq",
+            "choices": [
+              {
+                "id": "a",
+                "text": {
+                  "fr": "Il dort",
+                  "ar": "ينام"
+                }
+              },
+              {
+                "id": "b",
+                "text": {
+                  "fr": "Il n'y a pas de lumière solaire",
+                  "ar": "لا يوجد ضوء شمسي"
+                }
+              },
+              {
+                "id": "c",
+                "text": {
+                  "fr": "Il fait trop froid",
+                  "ar": "الجو بارد جدًا"
+                }
+              }
+            ],
+            "correctAnswer": "b"
+          }
+        ]
+      }
+    },
+    {
+      "id": "1ac_electricite_pile",
+      "title": {
+        "fr": "Activité 3 : La Pile (Énergie Chimique)",
+        "ar": "النشاط 3: البطارية (الطاقة الكيميائية)"
+      },
+      "predictions": [
+        {
+          "question": {
+            "fr": "Qu'y a-t-il à l'intérieur d'une pile neuve ?",
+            "ar": "ما الموجود داخل بطارية جديدة؟"
+          },
+          "type": "mcq",
+          "choices": [
+            {
+              "id": "a",
+              "text": {
+                "fr": "De l'électricité pure sous forme d'éclairs minuscules",
+                "ar": "كهرباء نقية على شكل صواعق صغيرة"
+              }
+            },
+            {
+              "id": "b",
+              "text": {
+                "fr": "Des substances chimiques prêtes à réagir",
+                "ar": "مواد كيميائية جاهزة للتفاعل"
+              }
+            },
+            {
+              "id": "c",
+              "text": {
+                "fr": "Une petite machine qui tourne très vite",
+                "ar": "آلة صغيرة تدور بسرعة كبيرة"
+              }
+            }
+          ],
+          "correctAnswer": "b"
+        }
+      ],
+      "simulation": {
+        "file": "simulations/batterie_sim.html",
+        "instructions": {
+          "fr": "Ferme le circuit en appuyant sur le bouton. Observe l'indicateur d'énergie chimique : il diminue progressivement jusqu'à ce que la pile soit vide !",
+          "ar": "أغلق الدارة بالضغط على الزر. لاحظ مؤشر الطاقة الكيميائية: ينخفض تدريجيًا حتى تفرغ البطارية!"
+        }
+      },
+      "explanation": {
+        "summary": {
+          "fr": "**La Pile : Conversion de l'Énergie Chimique en Électricité**\n\n**Principe de fonctionnement :**\n• La pile contient des substances chimiques (électrolytes et électrodes)\n• L'énergie est stockée dans la **matière chimique**\n\n**Comment ça marche ?**\n• Quand le circuit est fermé, les produits chimiques réagissent\n• Cette réaction chimique libère des électrons\n• Les électrons circulent dans le circuit = courant électrique\n\n**Pourquoi la pile s'épuise-t-elle ?**\n• Les produits chimiques se transforment progressivement\n• Quand ils sont tous consommés, la pile ne produit plus d'électricité\n• C'est pourquoi une pile finit par \"mourir\"\n\n**Différence avec une batterie rechargeable :**\n• Pile jetable : réaction irréversible\n• Batterie rechargeable : réaction réversible (on peut recharger)\n\n📌 **Conclusion** : La pile convertit l'énergie chimique en électricité. L'énergie n'est pas \"stockée électriquement\", mais dans les substances chimiques !",
+          "ar": "**البطارية: تحويل الطاقة الكيميائية إلى كهرباء**\n\n**مبدأ العمل:**\n• تحتوي البطارية على مواد كيميائية (إلكتروليتات وأقطاب)\n• الطاقة مخزنة في **المادة الكيميائية**\n\n**كيف تعمل؟**\n• عند إغلاق الدارة، تتفاعل المواد الكيميائية\n• هذا التفاعل الكيميائي يحرر إلكترونات\n• تدور الإلكترونات في الدارة = تيار كهربائي\n\n**لماذا تنفد البطارية؟**\n• المواد الكيميائية تتحول تدريجيًا\n• عند استهلاكها كلها، لا تنتج البطارية كهرباء\n• لهذا السبب تنتهي البطارية في النهاية\n\n**الفرق مع البطارية القابلة لإعادة الشحن:**\n• بطارية تُرمى: تفاعل غير قابل للعكس\n• بطارية قابلة للشحن: تفاعل قابل للعكس (يمكن إعادة الشحن)\n\n📌 **الخلاصة**: البطارية تحول الطاقة الكيميائية إلى كهرباء. الطاقة ليست \"مخزنة كهربائيًا\"، بل في المواد الكيميائية!"
+        },
+        "feedback": {
+          "correct": {
+            "fr": "🎉 Excellent ! Tu as bien compris qu'une pile contient des produits chimiques, pas de l'électricité déjà toute faite !",
+            "ar": "🎉 ممتاز! فهمت أن البطارية تحتوي على مواد كيميائية، وليس كهرباء جاهزة!"
+          },
+          "incorrect": {
+            "fr": "🤔 Pas tout à fait ! La simulation a montré que c'est une **réaction chimique** qui produit l'électricité. La pile ne stocke pas d'électricité toute faite !",
+            "ar": "🤔 ليس تمامًا! أظهرت المحاكاة أن **تفاعلًا كيميائيًا** هو الذي ينتج الكهرباء. البطارية لا تخزن كهرباء جاهزة!"
+          }
+        }
+      },
+      "quiz": {
+        "questions": [
+          {
+            "question": {
+              "fr": "Pourquoi une pile finit-elle par s'épuiser ?",
+              "ar": "لماذا تنفد البطارية في النهاية؟"
+            },
+            "type": "mcq",
+            "choices": [
+              {
+                "id": "a",
+                "text": {
+                  "fr": "L'électricité stockée s'échappe",
+                  "ar": "الكهرباء المخزنة تتسرب"
+                }
+              },
+              {
+                "id": "b",
+                "text": {
+                  "fr": "Les produits chimiques sont épuisés",
+                  "ar": "المواد الكيميائية تُستهلك"
+                }
+              },
+              {
+                "id": "c",
+                "text": {
+                  "fr": "La pile refroidit trop",
+                  "ar": "البطارية تبرد كثيرًا"
+                }
+              }
+            ],
+            "correctAnswer": "b"
+          },
+          {
+            "question": {
+              "fr": "Quel type d'énergie la pile convertit-elle en électricité ?",
+              "ar": "أي نوع من الطاقة تحوله البطارية إلى كهرباء؟"
+            },
+            "type": "mcq",
+            "choices": [
+              {
+                "id": "a",
+                "text": {
+                  "fr": "Énergie chimique",
+                  "ar": "الطاقة الكيميائية"
+                }
+              },
+              {
+                "id": "b",
+                "text": {
+                  "fr": "Énergie mécanique",
+                  "ar": "الطاقة الميكانيكية"
+                }
+              },
+              {
+                "id": "c",
+                "text": {
+                  "fr": "Énergie solaire",
+                  "ar": "الطاقة الشمسية"
+                }
+              }
+            ],
+            "correctAnswer": "a"
+          },
+          {
+            "question": {
+              "fr": "Que se passe-t-il quand le circuit est ouvert (interrupteur off) ?",
+              "ar": "ماذا يحدث عند فتح الدارة (المفتاح مغلق)؟"
+            },
+            "type": "mcq",
+            "choices": [
+              {
+                "id": "a",
+                "text": {
+                  "fr": "La pile continue de se vider",
+                  "ar": "البطارية تستمر في التفريغ"
+                }
+              },
+              {
+                "id": "b",
+                "text": {
+                  "fr": "Les produits chimiques restent intacts",
+                  "ar": "المواد الكيميائية تبقى سليمة"
+                }
+              },
+              {
+                "id": "c",
+                "text": {
+                  "fr": "La pile se recharge",
+                  "ar": "البطارية تعيد الشحن"
+                }
+              }
+            ],
+            "correctAnswer": "b"
+          }
+        ]
+      }
+    }
+  ]
+}

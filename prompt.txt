@@ -1,0 +1,127 @@
+🎯 Prompt pour recréer l'application "Physique Interactive"
+Crée une application web PWA (Progressive Web App) pédagogique pour l'enseignement de la physique au collège marocain, suivant la méthode pédagogique SSPOE (Situation → Simulation → Prédiction → Observation → Explication). L'app doit être 100% vanilla (HTML + CSS + JavaScript, aucun framework), bilingue français/arabe avec switch dynamique, et avoir un design premium dark mode.
+
+📁 Structure des fichiers
+index.html
+ — Shell minimal de l'app (navbar, zone <main id="app">, bannière d'installation PWA)
+style.css
+ — Design complet mobile-first, dark mode, glassmorphism, animations
+script.js
+ — Moteur SSPOE : routing, rendu, navigation, gestion PWA
+data.js
+ — Contenu pédagogique 100% data-driven (niveaux, cours, activités)
+manifest.json
+ — Manifeste PWA
+service-worker.js
+ — Cache-first pour support offline
+simulations/ — Dossier pour les simulations HTML interactives embarquées en iframe
+images/ — Dossier pour les images pédagogiques
+icons/ — Icône SVG de l'app
+🏗️ Architecture
+L'app est entièrement data-driven. Toute la logique de rendu lit un objet APP_DATA dans 
+data.js
+. Pour ajouter un cours, il suffit d'ajouter un objet dans le tableau — zéro modification du code.
+
+Structure de données APP_DATA :
+APP_DATA = {
+  app: { title, subtitle, welcome, footer }  // Métadonnées bilingues {fr, ar}
+  ui: { ... }  // Tous les labels d'interface bilingues
+  levels: [    // 3 niveaux : 1AC, 2AC, 3AC
+    {
+      id, name, shortName, icon, color, gradient,
+      courses: [
+        {
+          id, title, description, icon,
+          activities: [
+            {
+              id, title,
+              predictions: [   // Tableau de questions QCM
+                { question, image?, type:"mcq", choices:[{id, text}], correctAnswer }
+              ],
+              simulation: { file, instructions },
+              explanation: { summary, image?, images?, feedback:{correct, incorrect} },
+              quiz: {   // Quiz de compréhension post-explication (optionnel)
+                questions: [
+                  { question, type:"mcq"|"truefalse", choices?, correctAnswer }
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
+🎨 Design (style.css)
+Palette dark mode premium : background #0f0f23, cards #16213e, glassmorphism avec backdrop-filter: blur(20px)
+Fonts : Inter (latin) + Noto Sans Arabic (arabe) via Google Fonts
+CSS Custom Properties pour toutes les couleurs, espacements, transitions, ombres
+Animations : fadeInUp, float, pulse, shimmer pour micro-interactions
+Mobile-first : max-width 680px centré, responsive
+Support RTL : quand la langue est l'arabe, ajouter dir="rtl" et lang="ar" sur <html>, inverser les éléments avec flexbox row-reverse
+Composants : navbar glassmorphe, level cards avec gradient-top-border, course cards, activity cards, step progress bar avec cercles + lignes, step cards, choice buttons, quiz cards, install banner
+Chaque niveau a une couleur affichée via CSS variable --level-color
+⚙️ Logique (script.js)
+Enveloppé dans une IIFE 
+(function() { 'use strict'; ... })()
+.
+
+State :
+js
+state = {
+  lang: 'fr',          // 'fr' ou 'ar', persisté dans localStorage
+  currentView: 'home', // 'home' | 'courses' | 'player'
+  currentLevel: null,
+  currentCourse: null,
+  currentActivity: null,
+  sspoeStep: 0,        // 0=Prédiction, 1=Observation, 2=Explication, 3=Quiz
+  predictionsValidated: false,
+  currentPredictionIndex: 0,
+  userPredictions: {}
+}
+Routing / Vues :
+Home — Hero avec titre/sous-titre animés, grille de 3 niveaux (1AC 🔬, 2AC ⚡, 3AC 🧲)
+Courses — Header du niveau avec gradient, liste des cours → clic = liste des activités dépliées
+Player SSPOE — Barre de progression 3-4 étapes (Prédiction → Observation → Explication → Quiz optionnel)
+Cycle SSPOE :
+Prédiction — Affiche les questions QCM une par une avec pagination (Question 1/3...). L'étudiant sélectionne une réponse par question. Bouton "Valider toutes mes prédictions" quand toutes sont répondues. Après validation : affiche ✅/❌ par question avec la bonne réponse.
+Observation — Charge la simulation HTML dans une iframe. Bouton plein écran. Instructions bilingues.
+Explication — Résumé formaté (supporte gras), images optionnelles, feedback personnalisé (correct/incorrect basé sur la première prédiction). Bouton "Tester ta compréhension" si un quiz existe.
+Quiz — Questions de compréhension post-explication (QCM + Vrai/Faux). Score automatique avec message adaptatif (🎉 parfait / 👍 bien / 🔄 réessaie). Possibilité de réessayer.
+Navigation :
+Bouton retour dans la navbar qui remonte d'un cran (quiz→explication, explication→observation, etc.)
+Le titre de la navbar change dynamiquement selon la vue
+Bilinguisme :
+Fonction 
+t(obj)
+ qui retourne obj[state.lang]
+Fonction 
+tReplace(obj, replacements)
+ pour les templates comme "Question {current} / {total}"
+Switch langue dans la navbar, persiste dans localStorage
+Quand arabe : document.documentElement.lang = 'ar' et dir = 'rtl'
+📱 PWA
+manifest.json
+ : name, short_name, start_url, display:standalone, orientation:portrait, theme_color #1a1a2e, icônes SVG
+service-worker.js
+ : stratégie cache-first, pre-cache du shell, nettoyage des anciens caches, fallback offline
+Bannière d'installation native avec événement beforeinstallprompt
+📝 Contenu exemple (data.js)
+Inclure un cours complet pour le niveau 1AC :
+
+Cours : "La Pression" avec 1 activité
+3 questions de prédiction (QCM) sur la pression et la surface
+Simulation : fichier HTML interactif dans simulations/ (brique sur sable, clic pour changer orientation)
+Explication avec formule P = F ÷ S et images
+Quiz de compréhension avec 4 questions (3 QCM + 1 Vrai/Faux)
+Les niveaux 2AC et 3AC avec courses: [] (prêts pour du contenu futur)
+🎯 Points clés
+Zéro dépendance externe (sauf Google Fonts)
+Tout le contenu est dans 
+data.js
+ — le script ne contient aucun texte en dur
+Support offline complet via service worker
+Installable comme app native sur mobile
+Animations fluides et transitions pour une UX premium
+Images optionnelles dans les prédictions et explications avec légendes bilingues
+Tu peux copier-coller cette prompt directement dans un assistant IA pour recréer l'application à l'identique. 🚀

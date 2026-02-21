@@ -1,0 +1,14 @@
+{
+  "id": "1ac",
+  "name": {
+    "fr": "1ère Année Collège",
+    "ar": "السنة الأولى إعدادي"
+  },
+  "shortName": {
+    "fr": "1AC",
+    "ar": "1إع"
+  },
+  "icon": "🔬",
+  "color": "#4CAF50",
+  "gradient": "linear-gradient(135deg, #43A047, #66BB6A)"
+}

@@ -1,0 +1,926 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratoire : Générateurs et Récepteurs</title>
+
+    <style>
+        /* --- CSS SETUP --- */
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #sim-wrapper {
+            width: 1024px;
+            height: 640px;
+            position: absolute;
+            transform-origin: top left;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        /* Tapis de travail */
+        #workspace {
+            position: absolute;
+            top: 120px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            border: 2px dashed #bdc3c7;
+            border-radius: 10px;
+            background: #f7f9fa;
+        }
+
+        #workspace::after {
+            content: "ZONE DE MONTAGE";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 40px;
+            color: rgba(0, 0, 0, 0.05);
+            font-weight: bold;
+            pointer-events: none;
+        }
+
+        canvas {
+            display: block;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* UI OVERLAY */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header-bar {
+            background: #2c3e50;
+            color: white;
+            padding: 15px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: auto;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            height: 60px;
+            z-index: 10;
+        }
+
+        .mission-box {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .mission-badge {
+            background: #e67e22;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 14px;
+            text-transform: uppercase;
+        }
+
+        .mission-text {
+            font-size: 18px;
+            font-weight: 500;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        button {
+            background: #34495e;
+            color: white;
+            border: 1px solid #4d6075;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        button:hover {
+            background: #455a64;
+        }
+
+        button.action {
+            background: #27ae60;
+            border-color: #2ecc71;
+        }
+
+        button.action:hover {
+            background: #2ecc71;
+        }
+
+        .success-toast {
+            position: absolute;
+            bottom: 40px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: #27ae60;
+            color: white;
+            padding: 15px 30px;
+            border-radius: 50px;
+            font-size: 20px;
+            font-weight: bold;
+            box-shadow: 0 10px 30px rgba(39, 174, 96, 0.4);
+            opacity: 0;
+            transition: all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .success-toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* RTL */
+        body.rtl {
+            direction: rtl;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="sim-wrapper">
+        <div id="workspace"></div>
+        <canvas id="sim-canvas" width="1024" height="640"></canvas>
+
+        <div id="ui-layer">
+            <div class="header-bar">
+                <div class="mission-box">
+                    <span class="mission-badge" id="lbl-mission">Mission 1</span>
+                    <span class="mission-text" id="lbl-instruction">Réalisez un circuit : Pile + Interrupteur +
+                        Lampe</span>
+                </div>
+                <div class="btn-group">
+                    <button class="action" id="btn-next" onclick="app.nextMission()" style="display:none">Suivant
+                        ➔</button>
+                    <button onclick="app.toggleLang()">FR / AR</button>
+                    <button onclick="app.resetMission()">Recommencer</button>
+                </div>
+            </div>
+            <div id="toast" class="success-toast">Circuit Correct ! / دارة صحيحة</div>
+        </div>
+    </div>
+
+    <script>
+        /** * CONFIGURATION 
+         */
+        const CONFIG = {
+            w: 1024, h: 640,
+            colors: {
+                wire: '#e74c3c', // Rouge
+                wireActive: '#c0392b',
+                copper: '#e67e22',
+                zoneGen: '#dfe6e9',
+                zoneRec: '#dfe6e9',
+                label: '#2c3e50',
+                snapValid: '#2ecc71' // Vert pour feedback connexion
+            },
+            zones: {
+                gen: { x: 20, y: 100, w: 250, h: 520, label: "GÉNÉRATEURS" },
+                rec: { x: 754, y: 100, w: 250, h: 520, label: "RÉCEPTEURS" },
+                tool: { x: 400, y: 550, w: 224, h: 80, label: "COMMANDES" }
+            }
+        };
+
+        const TEXTS = {
+            fr: {
+                m1: "Allumer la lampe : Utilisez une Pile, un Interrupteur et une Lampe.",
+                m2: "Faire tourner le moteur : Remplacez la lampe par un Moteur.",
+                m3: "Générateur de labo : Utilisez le générateur de laboratoire pour alimenter le moteur.",
+                m4: "Haute Tension : Utilisez la Pile 9V pour allumer la lampe.",
+                success: "Bravo ! Le circuit fonctionne.",
+                gen: "GÉNÉRATEURS", rec: "RÉCEPTEURS", cmd: "COMMANDES"
+            },
+            ar: {
+                m1: "إشعال المصباح: استخدم بطارية، قاطعة ومصباح.",
+                m2: "تشغيل المحرك: استبدل المصباح بمحرك.",
+                m3: "مولد المختبر: استخدم مولد المختبر لتشغيل المحرك.",
+                m4: "توتر عالي: استخدم بطارية 9 فولت لإشعال المصباح.",
+                success: "أحسنت! الدارة تعمل.",
+                gen: "المولدات", rec: "المستقبلات", cmd: "التحكم"
+            }
+        };
+
+        /**
+         * CLASSES GRAPHIQUES
+         */
+
+        class Entity {
+            constructor(x, y, w, h, type) {
+                this.x = x; this.y = y; this.w = w; this.h = h;
+                this.type = type; // 'gen', 'rec', 'ctrl'
+                this.isDragging = false;
+                this.name = ""; // Nom pour affichage
+                this.terminals = [];
+            }
+            contains(mx, my) { return mx >= this.x && mx <= this.x + this.w && my >= this.y && my <= this.y + this.h; }
+
+            drawTerminals(ctx) {
+                this.terminals.forEach(t => {
+                    const tx = this.x + t.rx;
+                    const ty = this.y + t.ry;
+                    ctx.beginPath(); ctx.arc(tx, ty, 8, 0, Math.PI * 2); // Bornes plus grosses
+                    ctx.fillStyle = t.color || '#bdc3c7'; ctx.fill();
+                    ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 1; ctx.stroke();
+
+                    // Symbole
+                    if (t.label) {
+                        ctx.fillStyle = '#000'; ctx.font = 'bold 12px monospace'; ctx.textAlign = 'center';
+                        ctx.fillText(t.label, tx, ty - 12);
+                    }
+                });
+            }
+
+            getTerminalPos(id) {
+                const t = this.terminals.find(term => term.id === id);
+                if (t) return { x: this.x + t.rx, y: this.y + t.ry, id: id, parent: this };
+                return null;
+            }
+        }
+
+        // --- GENERATEURS ---
+
+        class FlatBattery extends Entity {
+            constructor(x, y) {
+                super(x, y, 100, 130, 'gen');
+                this.name = "Pile 4.5V";
+                this.voltage = 4.5;
+                this.terminals = [
+                    { id: 'bat45-neg', rx: 20, ry: -10, color: '#3498db', label: '-' },
+                    { id: 'bat45-pos', rx: 80, ry: -10, color: '#e74c3c', label: '+' }
+                ];
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(5, 5, 100, 130);
+                ctx.fillStyle = '#2c3e50'; ctx.fillRect(0, 0, 100, 130);
+                ctx.fillStyle = '#f1c40f'; ctx.fillRect(10, 30, 80, 70);
+                ctx.fillStyle = '#c0392b'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('PILE', 50, 65);
+                ctx.fillStyle = '#000'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('4.5V', 50, 85);
+                ctx.fillStyle = '#bdc3c7'; ctx.fillRect(15, -15, 10, 15); ctx.fillRect(75, -15, 10, 15);
+                ctx.restore();
+                this.drawTerminals(ctx);
+            }
+        }
+
+        class Battery9V extends Entity {
+            constructor(x, y) {
+                super(x, y, 80, 120, 'gen');
+                this.name = "Pile 9V";
+                this.voltage = 9;
+                this.terminals = [
+                    { id: 'bat9-pos', rx: 25, ry: -5, color: '#e74c3c', label: '+' },
+                    { id: 'bat9-neg', rx: 55, ry: -5, color: '#3498db', label: '-' }
+                ];
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(5, 5, 80, 120);
+                ctx.fillStyle = '#34495e'; ctx.fillRect(0, 0, 80, 120);
+                ctx.beginPath(); ctx.moveTo(0, 110); ctx.arc(40, 110, 40, 0, Math.PI); ctx.fill();
+                ctx.fillStyle = '#e67e22'; ctx.fillRect(0, 30, 80, 5);
+                ctx.fillStyle = '#ecf0f1'; ctx.font = 'bold 20px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('9V', 40, 70);
+                ctx.fillStyle = '#bdc3c7'; ctx.beginPath(); ctx.arc(25, -5, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(55, -5, 10, 0, Math.PI * 2); ctx.stroke();
+                ctx.restore();
+                this.drawTerminals(ctx);
+            }
+        }
+
+        class LabGen extends Entity {
+            constructor(x, y) {
+                super(x, y, 140, 100, 'gen');
+                this.name = "Générateur Labo";
+                this.voltage = 12;
+                this.terminals = [
+                    { id: 'lab-neg', rx: 30, ry: 80, color: '#000', label: '-' },
+                    { id: 'lab-pos', rx: 110, ry: 80, color: '#e74c3c', label: '+' }
+                ];
+                this.isOn = true;
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.fillRect(5, 5, 140, 100);
+                ctx.fillStyle = '#95a5a6'; ctx.fillRect(0, 0, 140, 100);
+                ctx.fillStyle = '#2c3e50'; ctx.fillRect(20, 15, 100, 40);
+                ctx.fillStyle = '#e74c3c'; ctx.font = 'bold 24px monospace'; ctx.textAlign = 'right';
+                ctx.fillText('12.0', 90, 43);
+                ctx.font = '16px monospace'; ctx.fillText('V', 110, 43);
+                ctx.beginPath(); ctx.arc(30, 80, 12, 0, Math.PI * 2); ctx.fillStyle = '#333'; ctx.fill();
+                ctx.beginPath(); ctx.arc(110, 80, 12, 0, Math.PI * 2); ctx.fillStyle = '#c0392b'; ctx.fill();
+                ctx.restore();
+                this.drawTerminals(ctx);
+            }
+        }
+
+        // --- RECEPTEURS ---
+
+        class Lamp extends Entity {
+            constructor(x, y) {
+                super(x, y, 80, 120, 'rec');
+                this.name = "Lampe";
+                this.isActive = false;
+                this.currentVoltage = 0; // Pour gérer la luminosité
+                this.poweredBy = [];
+                this.terminals = [
+                    { id: 'lamp-side', rx: 15, ry: 90 }, // Side
+                    { id: 'lamp-bot', rx: 40, ry: 125 }  // Bot
+                ];
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.fillStyle = '#7f8c8d'; ctx.fillRect(15, 80, 50, 25);
+                ctx.beginPath(); ctx.arc(40, 50, 35, 0, Math.PI * 2);
+
+                if (this.isActive) {
+                    // Intensité basée sur le voltage
+                    let opacity = 0.5;
+                    let blur = 20;
+
+                    if (this.currentVoltage >= 12) { opacity = 1.0; blur = 60; }
+                    else if (this.currentVoltage >= 9) { opacity = 0.8; blur = 40; }
+                    else { opacity = 0.5; blur = 15; } // 4.5V
+
+                    ctx.fillStyle = `rgba(241, 196, 15, ${opacity})`;
+                    ctx.shadowColor = '#f1c40f';
+                    ctx.shadowBlur = blur;
+                    ctx.fill();
+                    ctx.shadowBlur = 0;
+                    ctx.strokeStyle = '#fff'; ctx.lineWidth = 3; ctx.stroke();
+                } else {
+                    ctx.fillStyle = 'rgba(255,255,255,0.4)'; ctx.strokeStyle = '#bdc3c7'; ctx.lineWidth = 1; ctx.fill(); ctx.stroke();
+                }
+                ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.moveTo(25, 105); ctx.lineTo(55, 105); ctx.lineTo(40, 125); ctx.fill();
+                ctx.restore();
+                this.drawTerminals(ctx);
+            }
+        }
+
+        class Motor extends Entity {
+            constructor(x, y) {
+                super(x, y, 100, 100, 'rec');
+                this.name = "Moteur";
+                this.isActive = false;
+                this.currentVoltage = 0;
+                this.angle = 0;
+                this.poweredBy = [];
+                this.terminals = [
+                    { id: 'mot-1', rx: 20, ry: 90 },
+                    { id: 'mot-2', rx: 80, ry: 90 }
+                ];
+            }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                // Corps Moteur
+                ctx.fillStyle = '#7f8c8d';
+                ctx.beginPath(); ctx.arc(50, 50, 40, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#bdc3c7';
+                ctx.beginPath(); ctx.arc(50, 50, 30, 0, Math.PI * 2); ctx.fill();
+
+                // Axe rotatif (avec hélice pour visibilité)
+                ctx.save(); ctx.translate(50, 50);
+                if (this.isActive) {
+                    // Vitesse basée sur le voltage
+                    let speed = 0.2; // 4.5V
+                    if (this.currentVoltage >= 12) speed = 0.8; // 12V
+                    else if (this.currentVoltage >= 9) speed = 0.5; // 9V
+
+                    this.angle += speed;
+                }
+                ctx.rotate(this.angle);
+                ctx.fillStyle = '#34495e';
+                ctx.beginPath(); ctx.roundRect(-5, -45, 10, 90, 5); ctx.fill();
+                ctx.beginPath(); ctx.roundRect(-45, -5, 90, 10, 5); ctx.fill();
+                ctx.restore();
+
+                // Base connecteurs
+                ctx.fillStyle = '#34495e'; ctx.fillRect(10, 80, 20, 20); ctx.fillRect(70, 80, 20, 20);
+                ctx.restore();
+                this.drawTerminals(ctx);
+            }
+        }
+
+        // --- COMMANDES ---
+
+        class Switch extends Entity {
+            constructor(x, y) {
+                super(x, y, 100, 60, 'ctrl');
+                this.name = "Interrupteur";
+                this.isOpen = true;
+                this.terminals = [
+                    { id: 'sw-1', rx: 10, ry: 30 },
+                    { id: 'sw-2', rx: 90, ry: 30 }
+                ];
+            }
+            toggle() { this.isOpen = !this.isOpen; }
+            draw(ctx) {
+                ctx.save(); ctx.translate(this.x, this.y);
+                ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.roundRect(0, 10, 100, 40, 5); ctx.fill();
+
+                // Levier
+                ctx.save(); ctx.translate(10, 30);
+                ctx.rotate(this.isOpen ? -0.4 : 0);
+                ctx.fillStyle = '#ecf0f1'; ctx.fillRect(0, -5, 80, 10);
+                ctx.fillStyle = '#e74c3c'; ctx.beginPath(); ctx.arc(75, 0, 8, 0, Math.PI * 2); ctx.fill();
+                ctx.restore();
+
+                ctx.restore();
+                this.drawTerminals(ctx);
+            }
+            hitTestLever(mx, my) { return this.contains(mx, my); }
+        }
+
+        // --- FILS ---
+
+        class Wire {
+            constructor(x1, y1, x2, y2) {
+                this.id = 'w-' + Math.floor(Math.random() * 100000);
+                this.p1 = { x: x1, y: y1, connectedTo: null };
+                this.p2 = { x: x2, y: y2, connectedTo: null };
+            }
+            draw(ctx) {
+                ctx.beginPath(); ctx.moveTo(this.p1.x, this.p1.y);
+                const mx = (this.p1.x + this.p2.x) / 2; const my = (this.p1.y + this.p2.y) / 2 + 40;
+                ctx.quadraticCurveTo(mx, my, this.p2.x, this.p2.y);
+
+                // Couleur si connecté (Optionnel, mais aide au debug)
+                ctx.strokeStyle = CONFIG.colors.wire;
+                ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.stroke();
+
+                // Extrémités
+                this.drawEnd(ctx, this.p1);
+                this.drawEnd(ctx, this.p2);
+            }
+
+            drawEnd(ctx, p) {
+                ctx.beginPath(); ctx.arc(p.x, p.y, 6, 0, Math.PI * 2);
+                ctx.fillStyle = CONFIG.colors.copper; ctx.fill();
+
+                // Indicateur de connexion réussie (Cercle vert)
+                if (p.connectedTo) {
+                    ctx.beginPath(); ctx.arc(p.x, p.y, 9, 0, Math.PI * 2);
+                    ctx.strokeStyle = CONFIG.colors.snapValid; ctx.lineWidth = 2; ctx.stroke();
+                }
+            }
+
+            hitTest(mx, my) {
+                if (Math.hypot(mx - this.p1.x, my - this.p1.y) < 20) return 'p1';
+                if (Math.hypot(mx - this.p2.x, my - this.p2.y) < 20) return 'p2';
+                const cx = (this.p1.x + this.p2.x) / 2; const cy = (this.p1.y + this.p2.y) / 2 + 20;
+                if (Math.hypot(mx - cx, my - cy) < 30) return 'body';
+                return null;
+            }
+        }
+
+        /**
+         * MOTEUR D'APPLICATION
+         */
+        class App {
+            constructor() {
+                this.canvas = document.getElementById('sim-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.mission = 1;
+                this.lang = 'fr';
+                this.scale = 1;
+                this.tooltip = null;
+
+                this.initScene(); // Initialisation complète
+                this.bindEvents();
+                this.updateUI();
+                this.loop();
+            }
+
+            // Réinitialise tout à l'état de départ
+            initScene() {
+                this.inventory = {
+                    gen: [new FlatBattery(50, 150), new Battery9V(170, 150), new LabGen(50, 350)],
+                    rec: [new Lamp(820, 150), new Motor(820, 350)],
+                    ctrl: [new Switch(460, 560)]
+                };
+
+                this.wires = [];
+                this.wires.push(new Wire(300, 580, 450, 580));
+                this.wires.push(new Wire(600, 580, 750, 580));
+                this.wires.push(new Wire(350, 600, 650, 600));
+
+                this.components = []; // Pas vraiment utilisé car on lit l'inventaire, mais pour propreté
+            }
+
+            loop() {
+                this.ctx.clearRect(0, 0, CONFIG.w, CONFIG.h);
+
+                this.drawZone(CONFIG.zones.gen, TEXTS[this.lang].gen);
+                this.drawZone(CONFIG.zones.rec, TEXTS[this.lang].rec);
+                this.drawZone(CONFIG.zones.tool, TEXTS[this.lang].cmd);
+
+                const allComps = [...this.inventory.gen, ...this.inventory.rec, ...this.inventory.ctrl];
+                allComps.forEach(c => c.draw(this.ctx));
+                this.wires.forEach(w => w.draw(this.ctx));
+
+                this.checkCircuit(); // Boucle physique constante
+
+                // Affichage Tooltip (Nom composant)
+                if (this.tooltip && this.tooltip.timer > 0) {
+                    this.tooltip.timer--;
+                    this.ctx.save();
+                    this.ctx.font = "bold 16px Roboto";
+                    const w = this.ctx.measureText(this.tooltip.text).width + 20;
+                    this.ctx.fillStyle = "rgba(0,0,0,0.8)";
+                    this.ctx.beginPath();
+                    this.ctx.roundRect(this.tooltip.x - w / 2, this.tooltip.y - 40, w, 30, 5);
+                    this.ctx.fill();
+                    this.ctx.fillStyle = "#fff";
+                    this.ctx.textAlign = "center";
+                    this.ctx.fillText(this.tooltip.text, this.tooltip.x, this.tooltip.y - 20);
+                    this.ctx.restore();
+                }
+
+                requestAnimationFrame(() => this.loop());
+            }
+
+            drawZone(z, title) {
+                this.ctx.save();
+                this.ctx.strokeStyle = '#bdc3c7'; this.ctx.lineWidth = 2; this.ctx.setLineDash([5, 5]);
+                this.ctx.strokeRect(z.x, z.y, z.w, z.h);
+                this.ctx.fillStyle = '#7f8c8d'; this.ctx.font = 'bold 16px sans-serif'; this.ctx.textAlign = 'center';
+                this.ctx.fillText(title, z.x + z.w / 2, z.y + 30); // Texte à l'intérieur
+                this.ctx.restore();
+            }
+
+            // --- PHYSIQUE CIRCUIT ---
+
+            checkCircuit() {
+                // 1. Reset de TOUS les récepteurs (pour qu'ils s'éteignent si déconnectés)
+                [...this.inventory.rec].forEach(r => {
+                    r.isActive = false;
+                    r.poweredBy = []; // Reset sources
+                    // Reset voltage
+                    if (r instanceof Lamp || r instanceof Motor) r.currentVoltage = 0;
+                });
+
+                // 2. Construction du graphe de connectivité
+                const adj = {};
+                const addEdge = (a, b) => {
+                    if (!adj[a]) adj[a] = []; if (!adj[b]) adj[b] = [];
+                    adj[a].push(b); adj[b].push(a);
+                };
+
+                // Arêtes des Fils
+                this.wires.forEach(w => {
+                    addEdge(w.id + 'p1', w.id + 'p2');
+                    if (w.p1.connectedTo) addEdge(w.id + 'p1', w.p1.connectedTo);
+                    if (w.p2.connectedTo) addEdge(w.id + 'p2', w.p2.connectedTo);
+                });
+
+                // Arêtes Interrupteurs (Si fermés)
+                this.inventory.ctrl.forEach(sw => {
+                    if (sw instanceof Switch && !sw.isOpen) {
+                        addEdge('sw-1', 'sw-2');
+                    }
+                });
+
+                // 3. Propagation du courant depuis chaque Générateur
+                this.inventory.gen.forEach(gen => {
+                    let posId, negId;
+                    if (gen instanceof FlatBattery) { posId = 'bat45-pos'; negId = 'bat45-neg'; }
+                    else if (gen instanceof Battery9V) { posId = 'bat9-pos'; negId = 'bat9-neg'; }
+                    else if (gen instanceof LabGen) { posId = 'lab-pos'; negId = 'lab-neg'; }
+
+                    if (!posId) return;
+
+                    // Parcours (DFS)
+                    const visited = new Set();
+                    const stack = [posId];
+
+                    // On track quels récepteurs sont sur ce chemin spécifique
+                    const potentialReceivers = new Set();
+
+                    while (stack.length > 0) {
+                        const u = stack.pop();
+                        if (visited.has(u)) continue;
+                        visited.add(u);
+
+                        // Si on traverse un récepteur, on note qu'il est sur le chemin
+                        if (u.startsWith('lamp')) potentialReceivers.add('lamp');
+                        if (u.startsWith('mot')) potentialReceivers.add('mot');
+
+                        // Traversée interne des récepteurs (Le courant passe à travers)
+                        if (u === 'lamp-side') stack.push('lamp-bot');
+                        if (u === 'lamp-bot') stack.push('lamp-side');
+                        if (u === 'mot-1') stack.push('mot-2');
+                        if (u === 'mot-2') stack.push('mot-1');
+
+                        if (adj[u]) for (let v of adj[u]) stack.push(v);
+                    }
+
+                    // Si ce réseau connecte le (+) au (-), alors le courant circule !
+                    if (visited.has(negId)) {
+                        if (potentialReceivers.has('lamp')) {
+                            const l = this.inventory.rec.find(r => r instanceof Lamp);
+                            l.isActive = true;
+                            l.currentVoltage = gen.voltage; // Applique le voltage
+                            l.poweredBy.push(gen.constructor.name);
+                        }
+                        if (potentialReceivers.has('mot')) {
+                            const m = this.inventory.rec.find(r => r instanceof Motor);
+                            m.isActive = true;
+                            m.currentVoltage = gen.voltage; // Applique le voltage
+                            m.poweredBy.push(gen.constructor.name);
+                        }
+                    }
+                });
+
+                this.checkMission();
+            }
+
+            checkMission() {
+                const lamp = this.inventory.rec.find(r => r instanceof Lamp);
+                const motor = this.inventory.rec.find(r => r instanceof Motor);
+
+                let success = false;
+
+                // La mission se valide SI le composant demandé est actif
+                // Les autres composants PEUVENT fonctionner aussi (c'est réaliste), mais ne valident pas seuls la mission.
+                if (this.mission === 1) {
+                    // Mission: Allumer lampe
+                    if (lamp.isActive) success = true;
+                } else if (this.mission === 2) {
+                    // Mission: Tourner moteur
+                    if (motor.isActive) success = true;
+                } else if (this.mission === 3) {
+                    // Mission: Labo + Moteur (On valide si moteur tourne)
+                    if (motor.isActive) success = true;
+                } else if (this.mission === 4) {
+                    // M4: Source spécifique (9V) + Lamp
+                    if (lamp.isActive && lamp.poweredBy.includes('Battery9V')) success = true;
+                }
+
+                if (success) {
+                    document.getElementById('toast').classList.add('show');
+                    document.getElementById('btn-next').style.display = 'block';
+                } else {
+                    document.getElementById('toast').classList.remove('show');
+                    document.getElementById('btn-next').style.display = 'none';
+                }
+            }
+
+            nextMission() {
+                this.mission++;
+                if (this.mission > 4) this.mission = 1;
+                this.updateUI();
+                // Pas de resetScene ici, on garde le montage
+                this.checkCircuit();
+            }
+
+            resetMission() {
+                // "Recommencer" -> Reset total positions
+                this.initScene();
+                document.getElementById('toast').classList.remove('show');
+                document.getElementById('btn-next').style.display = 'none';
+            }
+
+            // Helper: composant est-il dans sa zone ?
+            isInZone(c) {
+                const cx = c.x + c.w / 2;
+                const cy = c.y + c.h / 2;
+                const zones = [CONFIG.zones.gen, CONFIG.zones.rec, CONFIG.zones.tool];
+                for (let z of zones) {
+                    if (cx >= z.x && cx <= z.x + z.w && cy >= z.y && cy <= z.y + z.h) return true;
+                }
+                return false;
+            }
+
+            bindEvents() {
+                const getXY = e => {
+                    const r = this.canvas.getBoundingClientRect();
+                    const sx = CONFIG.w / r.width; const sy = CONFIG.h / r.height;
+                    return { x: (e.clientX - r.left) * sx, y: (e.clientY - r.top) * sy };
+                };
+
+                const start = (e) => {
+                    e.preventDefault();
+                    const { x, y } = getXY(e.touches ? e.touches[0] : e);
+
+                    const sw = this.inventory.ctrl[0];
+                    if (sw.contains(x, y)) {
+                        const t1 = sw.getTerminalPos('sw-1'); const t2 = sw.getTerminalPos('sw-2');
+                        if (Math.hypot(x - t1.x, y - t1.y) > 20 && Math.hypot(x - t2.x, y - t2.y) > 20) {
+                            sw.toggle(); this.checkCircuit(); return;
+                        }
+                    }
+
+                    for (let w of this.wires) {
+                        const hit = w.hitTest(x, y);
+                        if (hit === 'p1' || hit === 'p2') {
+                            this.dragObj = w; this.dragMode = hit;
+                            if (hit === 'p1') w.p1.connectedTo = null; else w.p2.connectedTo = null;
+                            return;
+                        }
+                        if (hit === 'body') {
+                            this.dragObj = w; this.dragMode = 'body';
+                            this.dragOffset = { dx: x - w.p1.x, dy: y - w.p1.y };
+                            return;
+                        }
+                    }
+
+                    const all = [...this.inventory.gen, ...this.inventory.rec, ...this.inventory.ctrl];
+                    for (let c of all) {
+                        if (c.contains(x, y)) {
+                            this.dragObj = c; this.dragMode = 'comp';
+                            this.dragOffset = { dx: x - c.x, dy: y - c.y };
+
+                            if (this.isInZone(c)) {
+                                this.tooltip = { text: c.name, x: c.x + c.w / 2, y: c.y, timer: 60 };
+                            }
+                            return;
+                        }
+                    }
+                };
+
+                const move = (e) => {
+                    e.preventDefault(); if (!this.dragObj) return;
+                    const { x, y } = getXY(e.touches ? e.touches[0] : e);
+
+                    if (this.dragMode === 'p1') { this.dragObj.p1.x = x; this.dragObj.p1.y = y; }
+                    else if (this.dragMode === 'p2') { this.dragObj.p2.x = x; this.dragObj.p2.y = y; }
+                    else if (this.dragMode === 'body') {
+                        const w = this.dragObj;
+                        const ox = w.p2.x - w.p1.x; const oy = w.p2.y - w.p1.y;
+                        w.p1.x = x - this.dragOffset.dx; w.p1.y = y - this.dragOffset.dy;
+                        w.p2.x = w.p1.x + ox; w.p2.y = w.p1.y + oy;
+                        w.p1.connectedTo = null; w.p2.connectedTo = null;
+                    }
+                    else if (this.dragMode === 'comp') {
+                        this.dragObj.x = x - this.dragOffset.dx;
+                        this.dragObj.y = y - this.dragOffset.dy;
+                        this.wires.forEach(w => {
+                            const t1 = w.p1.connectedTo; const t2 = w.p2.connectedTo;
+                            if (t1 && this.dragObj.getTerminalPos(t1)) w.p1.connectedTo = null;
+                            if (t2 && this.dragObj.getTerminalPos(t2)) w.p2.connectedTo = null;
+                        });
+                    }
+                    this.checkCircuit();
+                };
+
+                const end = (e) => {
+                    if (!this.dragObj) return;
+                    if (this.dragObj instanceof Wire) {
+                        const p = this.dragMode === 'p1' ? this.dragObj.p1 : (this.dragMode === 'p2' ? this.dragObj.p2 : null);
+                        if (p) this.trySnap(p);
+                        if (this.dragMode === 'body') { this.trySnap(this.dragObj.p1); this.trySnap(this.dragObj.p2); }
+                    }
+                    this.dragObj = null;
+                    this.checkCircuit();
+                };
+
+                this.canvas.addEventListener('mousedown', start);
+                window.addEventListener('mousemove', move);
+                window.addEventListener('mouseup', end);
+                this.canvas.addEventListener('touchstart', start, { passive: false });
+                window.addEventListener('touchmove', move, { passive: false });
+                window.addEventListener('touchend', end);
+                window.addEventListener('resize', () => this.scaleToFit());
+                this.scaleToFit();
+            }
+
+            trySnap(point) {
+                point.connectedTo = null;
+                let best = 30; // Rayon augmenté pour faciliter la connexion
+                let target = null; let tx = 0, ty = 0;
+
+                // Snap aux composants
+                const all = [...this.inventory.gen, ...this.inventory.rec, ...this.inventory.ctrl];
+                all.forEach(c => {
+                    c.terminals.forEach(t => {
+                        const absX = c.x + t.rx; const absY = c.y + t.ry;
+                        const d = Math.hypot(point.x - absX, point.y - absY);
+                        if (d < best) { best = d; target = t.id; tx = absX; ty = absY; }
+                    });
+                });
+
+                // Snap aux fils (Chainage)
+                this.wires.forEach(w => {
+                    if (w === this.dragObj) return;
+                    const d1 = Math.hypot(point.x - w.p1.x, point.y - w.p1.y);
+                    if (d1 < best) { best = d1; target = w.id + 'p1'; tx = w.p1.x; ty = w.p1.y; }
+                    const d2 = Math.hypot(point.x - w.p2.x, point.y - w.p2.y);
+                    if (d2 < best) { best = d2; target = w.id + 'p2'; tx = w.p2.x; ty = w.p2.y; }
+                });
+
+                if (target) { point.x = tx; point.y = ty; point.connectedTo = target; }
+            }
+
+            scaleToFit() {
+                // handled by global scaleToFit
+            }
+
+            toggleLang() {
+                this.lang = this.lang === 'fr' ? 'ar' : 'fr';
+                document.body.classList.toggle('rtl', this.lang === 'ar');
+                this.updateUI();
+            }
+
+            updateUI() {
+                const t = TEXTS[this.lang];
+                document.getElementById('lbl-mission').innerText = "Mission " + this.mission;
+                let txt = "";
+                if (this.mission === 1) txt = t.m1;
+                if (this.mission === 2) txt = t.m2;
+                if (this.mission === 3) txt = t.m3;
+                if (this.mission === 4) txt = t.m4;
+                document.getElementById('lbl-instruction').innerText = txt;
+                document.getElementById('toast').innerText = t.success;
+            }
+        }
+
+        const app = new App();
+
+        // ---- Standard scaleToFit (CLAUDE.md) ----
+        const DESIGN_W = 1024, DESIGN_H = 640;
+        const wrapper = document.getElementById('sim-wrapper');
+        let userZoom = 1, panX = 0, panY = 0;
+
+        function scaleToFit() {
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const baseScale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+            const totalScale = baseScale * userZoom;
+            wrapper.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + totalScale + ')';
+            wrapper.style.left = ((vw - DESIGN_W * baseScale) / 2) + 'px';
+            wrapper.style.top = ((vh - DESIGN_H * baseScale) / 2) + 'px';
+        }
+        scaleToFit();
+        window.addEventListener('resize', function () { userZoom = 1; panX = 0; panY = 0; scaleToFit(); });
+
+        // ---- Pinch-to-zoom (mandatory) ----
+        (function () {
+            var pinching = false, lastDist = 0, lastMidX = 0, lastMidY = 0, lastTap = 0;
+            document.addEventListener('touchstart', function (e) {
+                if (e.touches.length === 2) {
+                    e.preventDefault(); pinching = true;
+                    var t1 = e.touches[0], t2 = e.touches[1];
+                    lastDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                    lastMidX = (t1.clientX + t2.clientX) / 2;
+                    lastMidY = (t1.clientY + t2.clientY) / 2;
+                }
+            }, { passive: false });
+            document.addEventListener('touchmove', function (e) {
+                if (!pinching || e.touches.length !== 2) return;
+                e.preventDefault();
+                var t1 = e.touches[0], t2 = e.touches[1];
+                var dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                var midX = (t1.clientX + t2.clientX) / 2, midY = (t1.clientY + t2.clientY) / 2;
+                var oldZoom = userZoom;
+                userZoom = Math.max(1, Math.min(5, userZoom * (dist / lastDist)));
+                var vw = window.innerWidth, vh = window.innerHeight;
+                var baseScale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+                var cx = (vw - DESIGN_W * baseScale) / 2, cy = (vh - DESIGN_H * baseScale) / 2;
+                var ratio = userZoom / oldZoom;
+                panX = panX * ratio + (1 - ratio) * (midX - cx);
+                panY = panY * ratio + (1 - ratio) * (midY - cy);
+                panX += midX - lastMidX; panY += midY - lastMidY;
+                lastDist = dist; lastMidX = midX; lastMidY = midY;
+                scaleToFit();
+            }, { passive: false });
+            document.addEventListener('touchend', function (e) {
+                if (e.touches.length < 2) pinching = false;
+                if (userZoom <= 1.05) { userZoom = 1; panX = 0; panY = 0; scaleToFit(); }
+                if (e.touches.length === 0) {
+                    var now = Date.now();
+                    if (now - lastTap < 300 && userZoom > 1) { userZoom = 1; panX = 0; panY = 0; scaleToFit(); }
+                    lastTap = now;
+                }
+            });
+        })();
+
+    </script>
+</body>
+
+</html>

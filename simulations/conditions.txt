@@ -1,0 +1,65 @@
+1. Taille fixe 1024x640
+
+<div id="sim-wrapper">
+    <!-- Tout le contenu ici -->
+</div>
+
+<style>
+html, body { margin: 0; overflow: hidden; background: #000; width: 100%; height: 100%; }
+#sim-wrapper {
+    width: 1024px;
+    height: 640px;
+    position: absolute;
+    transform-origin: top left;
+    overflow: hidden;
+}
+</style>
+Concevoir en pixels fixes (jamais %, vw, vh)
+Jamais de @media responsive — le scaleToFit() gere tout
+Canvas : dimensions fixes (ex: canvas.width = 1024)
+2. ScaleToFit + Pinch-to-Zoom (obligatoire)
+
+const DESIGN_W = 1024, DESIGN_H = 640;
+const wrapper = document.getElementById('sim-wrapper');
+let userZoom = 1, panX = 0, panY = 0;
+
+function scaleToFit() { /* ... voir CLAUDE.md */ }
+
+// + tout le bloc pinch-to-zoom IIFE
+Zoom : 1x min, 5x max
+Double-tap pour reset
+Reset au resize
+3. Viewport meta tag
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+Jamais maximum-scale=1.0 ni user-scalable=no
+
+4. Bilingue FR/AR obligatoire
+Bouton de langue avec toggleLanguage()
+Textes avec attributs data-fr / data-ar
+Support RTL pour l'arabe (dir="rtl")
+5. Librairies locales uniquement (offline)
+
+<script src="../libs/three.min.js"></script>    <!-- 3D -->
+<script src="../libs/p5.min.js"></script>        <!-- Canvas 2D -->
+<script src="../libs/matter.min.js"></script>    <!-- Physique 2D -->
+<script src="../libs/tailwindcss.js"></script>   <!-- CSS utilitaire -->
+Jamais de CDN — tout doit fonctionner hors-ligne.
+
+6. Enregistrement dans le projet
+Apres creation du fichier simulations/nom_sim.html :
+
+Ajouter le chemin dans data.js → activity.simulation.file
+Ajouter dans PRECACHE_ASSETS de service-worker.js
+Incrementer CACHE_VERSION
+7. Polices
+Francais : Inter (Google Fonts)
+Arabe : Noto Sans Arabic (Google Fonts)
+Resume rapide
+Regle	Detail
+Taille	1024x640 fixe, jamais responsive
+Scaling	scaleToFit() + pinch-to-zoom
+Viewport	Pas de maximum-scale / user-scalable=no
+Langue	Bilingue FR/AR + bouton toggle + RTL
+Libs	Locales dans ../libs/, jamais CDN
+Cache	Ajouter dans PRECACHE_ASSETS + bump version

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Batterie | محاكاة البطارية</title>
+    <script src="../libs/tailwindcss.js"></script>
+    <style>
+        html, body { margin: 0; overflow: hidden; background: #000; width: 100%; height: 100%; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #sim-wrapper {
+            width: 1024px; height: 640px;
+            position: absolute; transform-origin: top left;
+            overflow: hidden;
+            background: linear-gradient(180deg, #eef2f7, #dce4ed);
+        }
+        #switch-blade {
+            transform-box: view-box;
+            transform-origin: 481px 120px;
+            transition: transform 0.3s ease;
+        }
+        @keyframes glow-pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 0.85; }
+        }
+        .glow-active { animation: glow-pulse 1.8s ease-in-out infinite; }
+        .top-btn {
+            padding: 8px 16px; border: none; border-radius: 20px;
+            cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s;
+        }
+        html[dir="rtl"] #info-panel { direction: rtl; text-align: right; }
+        @media screen and (orientation: portrait) {
+            body.fullscreen-mode {
+                transform: rotate(90deg); transform-origin: left top;
+                width: 100vh; height: 100vw;
+                position: absolute; top: 100%; left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+<div id="sim-wrapper">
+
+    <!-- Top Right Buttons -->
+    <div style="position:absolute;top:12px;right:12px;display:flex;gap:8px;z-index:20;">
+        <button class="top-btn" style="background:rgba(46,204,113,0.9);color:white;" onclick="toggleFullscreen()">
+            ⛶ <span data-fr="Plein écran" data-ar="ملء الشاشة">Plein écran</span>
+        </button>
+        <button class="top-btn" style="background:rgba(255,255,255,0.9);border:2px solid #3498db;color:#2c3e50;" onclick="toggleLanguage()">
+            <span id="lang-label">العربية</span>
+        </button>
+    </div>
+
+    <!-- Main Circuit SVG -->
+    <svg id="circuit" viewBox="0 0 1024 640" width="1024" height="640" style="position:absolute;top:0;left:0;">
+        <defs>
+            <linearGradient id="battGrad" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0%" stop-color="#FFD54F"/>
+                <stop offset="50%" stop-color="#FFC107"/>
+                <stop offset="100%" stop-color="#FFB300"/>
+            </linearGradient>
+            <linearGradient id="chemGrad" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#4DD0E1"/>
+                <stop offset="100%" stop-color="#00838F"/>
+            </linearGradient>
+            <linearGradient id="chemGradLow" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#FF7043"/>
+                <stop offset="100%" stop-color="#D84315"/>
+            </linearGradient>
+            <radialGradient id="glowGrad">
+                <stop offset="0%" stop-color="rgba(255,255,150,0.7)"/>
+                <stop offset="100%" stop-color="rgba(255,255,150,0)"/>
+            </radialGradient>
+            <clipPath id="chemClip">
+                <rect x="172" y="198" width="56" height="186" rx="3"/>
+            </clipPath>
+        </defs>
+
+        <!-- ===== WIRES ===== -->
+        <!-- Red wire: Battery+ → Switch left -->
+        <path d="M 200 155 L 200 120 L 477 120" fill="none" stroke="#D00000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Red wire (+): Switch right → down to Plot -->
+        <path d="M 543 120 L 742 120 L 742 349" fill="none" stroke="#D00000" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Black wire (-): Culot bottom → down → Battery- -->
+        <path d="M 775 370 L 775 510 L 200 510 L 200 419" fill="none" stroke="#222" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+        <!-- Corner dots -->
+        <circle cx="200" cy="120" r="4" fill="#D00000"/>
+        <circle cx="742" cy="120" r="4" fill="#D00000"/>
+        <circle cx="775" cy="510" r="4" fill="#222"/>
+        <circle cx="200" cy="510" r="4" fill="#222"/>
+
+        <!-- Hidden electron paths -->
+        <path id="ePathRed" d="M 200 155 L 200 120 L 742 120 L 742 349" fill="none" stroke="none"/>
+        <path id="ePathBlack" d="M 775 370 L 775 510 L 200 510 L 200 419" fill="none" stroke="none"/>
+
+        <!-- ===== BATTERY ===== -->
+        <g id="battery-group">
+            <rect x="164" y="182" width="80" height="226" rx="8" fill="rgba(0,0,0,0.12)"/>
+            <rect x="160" y="178" width="80" height="226" rx="8" fill="url(#battGrad)" stroke="#D4A017" stroke-width="2"/>
+            <rect x="160" y="245" width="80" height="36" fill="rgba(0,0,0,0.15)"/>
+            <text x="200" y="268" text-anchor="middle" fill="white" font-size="14" font-weight="bold" opacity="0.7">1.5V</text>
+            <!-- Positive terminal -->
+            <rect x="183" y="155" width="34" height="26" rx="5" fill="#D32F2F" stroke="#B71C1C" stroke-width="1.5"/>
+            <text x="200" y="172" text-anchor="middle" fill="white" font-weight="bold" font-size="18" dominant-baseline="middle">+</text>
+            <!-- Negative terminal -->
+            <rect x="186" y="404" width="28" height="15" rx="3" fill="#555" stroke="#333" stroke-width="1.5"/>
+            <text x="200" y="414" text-anchor="middle" fill="white" font-weight="bold" font-size="13" dominant-baseline="middle">−</text>
+            <!-- Chemical energy window -->
+            <rect x="172" y="198" width="56" height="186" rx="4" fill="rgba(255,255,255,0.35)" stroke="rgba(255,255,255,0.5)" stroke-width="1"/>
+            <rect id="chem-level" x="172" y="198" width="56" height="186" rx="3" fill="url(#chemGrad)" clip-path="url(#chemClip)"/>
+            <!-- Bubbles -->
+            <g id="bubbles" style="display:none;" clip-path="url(#chemClip)">
+                <circle cx="185" cy="370" r="3" fill="rgba(255,255,255,0.5)">
+                    <animate attributeName="cy" values="370;210" dur="2s" repeatCount="indefinite"/>
+                    <animate attributeName="opacity" values="0.6;0" dur="2s" repeatCount="indefinite"/>
+                </circle>
+                <circle cx="200" cy="360" r="2" fill="rgba(255,255,255,0.4)">
+                    <animate attributeName="cy" values="360;220" dur="1.6s" repeatCount="indefinite" begin="0.4s"/>
+                    <animate attributeName="opacity" values="0.5;0" dur="1.6s" repeatCount="indefinite" begin="0.4s"/>
+                </circle>
+                <circle cx="212" cy="375" r="2.5" fill="rgba(255,255,255,0.5)">
+                    <animate attributeName="cy" values="375;215" dur="1.8s" repeatCount="indefinite" begin="0.7s"/>
+                    <animate attributeName="opacity" values="0.6;0" dur="1.8s" repeatCount="indefinite" begin="0.7s"/>
+                </circle>
+                <circle cx="220" cy="365" r="2" fill="rgba(255,255,255,0.4)">
+                    <animate attributeName="cy" values="365;225" dur="2.2s" repeatCount="indefinite" begin="1s"/>
+                    <animate attributeName="opacity" values="0.5;0" dur="2.2s" repeatCount="indefinite" begin="1s"/>
+                </circle>
+            </g>
+        </g>
+
+        <!-- ===== KNIFE SWITCH ===== -->
+        <g id="switch-group" style="cursor:pointer;" onclick="toggleCircuit()">
+            <rect x="458" y="94" width="104" height="52" rx="6" fill="#5D4037" stroke="#3E2723" stroke-width="2"/>
+            <circle cx="468" cy="104" r="3" fill="#888" stroke="#666" stroke-width="1"/>
+            <circle cx="552" cy="104" r="3" fill="#888" stroke="#666" stroke-width="1"/>
+            <circle cx="468" cy="136" r="3" fill="#888" stroke="#666" stroke-width="1"/>
+            <circle cx="552" cy="136" r="3" fill="#888" stroke="#666" stroke-width="1"/>
+            <!-- Left terminal post (pivot) -->
+            <rect x="473" y="100" width="16" height="40" rx="3" fill="#B8860B" stroke="#8B6914" stroke-width="1"/>
+            <circle cx="481" cy="120" r="5" fill="#DAA520" stroke="#8B6914" stroke-width="1"/>
+            <!-- Right terminal post (jaw) -->
+            <rect x="531" y="100" width="16" height="40" rx="3" fill="#B8860B" stroke="#8B6914" stroke-width="1"/>
+            <rect x="534" y="107" width="10" height="5" rx="1" fill="#7B6B1A"/>
+            <rect x="534" y="128" width="10" height="5" rx="1" fill="#7B6B1A"/>
+            <!-- Blade -->
+            <g id="switch-blade" style="transform: rotate(-45deg);">
+                <rect x="478" y="115" width="62" height="10" rx="3" fill="#CD853F" stroke="#8B6914" stroke-width="1.5"/>
+                <circle cx="520" cy="120" r="9" fill="#E53935" stroke="#C62828" stroke-width="2"/>
+                <circle cx="520" cy="120" r="4" fill="#EF5350"/>
+            </g>
+        </g>
+
+        <!-- ===== LAMP (horizontal: glass→right, culot→center, plot→left) ===== -->
+        <g id="lamp-group">
+            <!-- Glow -->
+            <circle id="lamp-glow" cx="835" cy="355" r="80" fill="url(#glowGrad)" opacity="0"/>
+            <!-- Glass bulb (pointing right) -->
+            <path id="bulb-glass" d="M 790 338 C 818 308 870 328 875 355 C 870 382 818 402 790 372 Z"
+                  fill="rgba(240,240,240,0.2)" stroke="#adb5bd" stroke-width="1.5"/>
+            <!-- Internal leads (horizontal) -->
+            <line x1="790" y1="347" x2="825" y2="347" stroke="#888" stroke-width="1.5"/>
+            <line x1="790" y1="363" x2="825" y2="363" stroke="#888" stroke-width="1.5"/>
+            <!-- Filament (vertical zigzag between leads) -->
+            <path id="filament" d="M 825 347 L 835 350 L 825 353 L 835 356 L 825 359 L 835 362 L 825 363"
+                  fill="none" stroke="#888" stroke-width="1.5"/>
+            <!-- Culot / Socket (horizontal cylinder) -->
+            <rect x="760" y="340" width="30" height="30" rx="3" fill="#94a3b8" stroke="#64748b" stroke-width="1.5"/>
+            <!-- Threading lines (vertical) -->
+            <line x1="770" y1="340" x2="770" y2="370" stroke="#cbd5e1" stroke-width="1" opacity="0.5"/>
+            <line x1="780" y1="340" x2="780" y2="370" stroke="#cbd5e1" stroke-width="1" opacity="0.5"/>
+            <!-- Culot terminal (bottom - black wire connects here) -->
+            <circle cx="775" cy="370" r="5" fill="#DAA520" stroke="#B8860B" stroke-width="1.5"/>
+            <!-- Insulator -->
+            <rect x="750" y="345" width="10" height="20" rx="2" fill="#1e293b"/>
+            <!-- Plot / center contact (left - black wire connects here) -->
+            <path d="M 750 349 L 742 352 L 742 358 L 750 361 Z" fill="#DAA520" stroke="#B8860B" stroke-width="1"/>
+        </g>
+
+        <!-- ===== ELECTRONS ===== -->
+        <g id="electrons-red" style="display:none;">
+            <circle r="5" fill="#FFD700" opacity="0.9"><animateMotion dur="2.5s" repeatCount="indefinite"><mpath href="#ePathRed"/></animateMotion></circle>
+            <circle r="5" fill="#FFD700" opacity="0.9"><animateMotion dur="2.5s" repeatCount="indefinite" begin="-0.8s"><mpath href="#ePathRed"/></animateMotion></circle>
+            <circle r="5" fill="#FFD700" opacity="0.9"><animateMotion dur="2.5s" repeatCount="indefinite" begin="-1.6s"><mpath href="#ePathRed"/></animateMotion></circle>
+        </g>
+        <g id="electrons-black" style="display:none;">
+            <circle r="5" fill="#FFD700" opacity="0.9"><animateMotion dur="2.5s" repeatCount="indefinite"><mpath href="#ePathBlack"/></animateMotion></circle>
+            <circle r="5" fill="#FFD700" opacity="0.9"><animateMotion dur="2.5s" repeatCount="indefinite" begin="-1.2s"><mpath href="#ePathBlack"/></animateMotion></circle>
+        </g>
+
+        <!-- ===== LABELS ===== -->
+        <g class="label-group"><rect rx="4" fill="rgba(0,0,0,0.65)"/><text id="label-battery" x="200" y="445" text-anchor="middle" fill="white" font-size="11" font-weight="bold">Pile (énergie chimique)</text></g>
+        <g class="label-group"><rect rx="4" fill="rgba(211,47,47,0.85)"/><text id="label-pos" x="258" y="168" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Borne +</text></g>
+        <g class="label-group"><rect rx="4" fill="rgba(80,80,80,0.85)"/><text id="label-neg" x="258" y="415" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Borne −</text></g>
+        <g class="label-group"><rect rx="4" fill="rgba(0,0,0,0.65)"/><text id="label-switch" x="510" y="162" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Interrupteur</text></g>
+        <g class="label-group"><rect rx="4" fill="rgba(0,0,0,0.65)"/><text id="label-lamp" x="840" y="310" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Lampe</text></g>
+        <g class="label-group"><rect rx="4" fill="rgba(100,100,100,0.8)"/><text id="label-culot" x="775" y="385" text-anchor="middle" fill="white" font-size="9" font-weight="bold">Culot</text></g>
+        <g class="label-group"><rect rx="4" fill="rgba(100,100,100,0.8)"/><text id="label-plot" x="738" y="385" text-anchor="middle" fill="white" font-size="9" font-weight="bold">Plot</text></g>
+        <g class="label-group"><rect rx="4" fill="rgba(211,47,47,0.85)"/><text id="label-wire-red" x="340" y="108" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Fil rouge (+)</text></g>
+        <g class="label-group"><rect rx="4" fill="rgba(50,50,50,0.85)"/><text id="label-wire-black" x="470" y="525" text-anchor="middle" fill="white" font-size="10" font-weight="bold">Fil noir (−)</text></g>
+    </svg>
+
+    <!-- Info Panel -->
+    <div id="info-panel" style="position:absolute;top:12px;left:12px;background:rgba(255,255,255,0.92);padding:10px 16px;border-radius:10px;box-shadow:0 3px 10px rgba(0,0,0,0.2);max-width:320px;z-index:15;">
+        <div id="info-title" style="font-size:14px;font-weight:800;color:#e74c3c;margin-bottom:3px;"></div>
+        <div id="info-text" style="font-size:11px;color:#555;line-height:1.4;"></div>
+    </div>
+
+    <!-- Energy Panel -->
+    <div id="energy-panel" style="position:absolute;right:12px;top:55px;background:rgba(0,0,0,0.85);border-radius:10px;padding:12px;z-index:15;color:white;width:90px;text-align:center;">
+        <div id="energy-label" style="font-size:10px;font-weight:700;margin-bottom:8px;line-height:1.2;" data-fr="Énergie Chimique" data-ar="الطاقة الكيميائية">Énergie Chimique</div>
+        <div style="width:100%;height:22px;background:#333;border-radius:11px;overflow:hidden;border:1px solid #555;">
+            <div id="energy-bar" style="height:100%;width:100%;background:linear-gradient(90deg,#00BCD4,#0097A7);border-radius:11px;transition:width 0.3s;"></div>
+        </div>
+        <div id="energy-percentage" style="font-size:16px;font-weight:800;margin-top:6px;">100%</div>
+    </div>
+
+    <!-- Controls Bar -->
+    <div style="position:absolute;bottom:12px;left:50%;transform:translateX(-50%);background:rgba(255,255,255,0.92);padding:10px 24px;border-radius:25px;box-shadow:0 3px 12px rgba(0,0,0,0.25);display:flex;gap:16px;align-items:center;z-index:20;">
+        <button id="circuit-switch-btn" onclick="toggleCircuit()" style="padding:10px 22px;border:none;border-radius:20px;cursor:pointer;font-weight:700;font-size:13px;background:#e74c3c;color:white;box-shadow:0 2px 8px rgba(0,0,0,0.15);transition:all 0.3s;">
+            <span data-fr-off="⚫ Circuit Ouvert" data-fr-on="✅ Circuit Fermé" data-ar-off="⚫ دارة مفتوحة" data-ar-on="✅ دارة مغلقة">⚫ Circuit Ouvert</span>
+        </button>
+        <button onclick="resetBattery()" style="padding:10px 22px;border:2px solid #e67e22;border-radius:20px;cursor:pointer;font-weight:700;font-size:13px;background:white;color:#e67e22;box-shadow:0 2px 8px rgba(0,0,0,0.15);transition:all 0.3s;">
+            <span data-fr="🔄 Nouvelle Pile" data-ar="🔄 بطارية جديدة">🔄 Nouvelle Pile</span>
+        </button>
+    </div>
+
+</div>
+
+<script>
+// ============ STATE ============
+let currentLang = 'fr';
+let circuitClosed = false;
+let chemicalEnergy = 100;
+
+const DESIGN_W = 1024, DESIGN_H = 640;
+const wrapper = document.getElementById('sim-wrapper');
+
+// ============ SCALE TO FIT + PINCH-TO-ZOOM ============
+let userZoom = 1, panX = 0, panY = 0;
+function scaleToFit() {
+    const vw = window.innerWidth, vh = window.innerHeight;
+    const baseScale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+    const totalScale = baseScale * userZoom;
+    wrapper.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + totalScale + ')';
+    wrapper.style.left = ((vw - DESIGN_W * baseScale) / 2) + 'px';
+    wrapper.style.top = ((vh - DESIGN_H * baseScale) / 2) + 'px';
+}
+scaleToFit();
+window.addEventListener('resize', function() { userZoom = 1; panX = 0; panY = 0; scaleToFit(); });
+
+(function() {
+    var pinching = false, lastDist = 0, lastMidX = 0, lastMidY = 0, lastTap = 0;
+    document.addEventListener('touchstart', function(e) {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            pinching = true;
+            var t1 = e.touches[0], t2 = e.touches[1];
+            lastDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            lastMidX = (t1.clientX + t2.clientX) / 2;
+            lastMidY = (t1.clientY + t2.clientY) / 2;
+        }
+    }, { passive: false });
+    document.addEventListener('touchmove', function(e) {
+        if (!pinching || e.touches.length !== 2) return;
+        e.preventDefault();
+        var t1 = e.touches[0], t2 = e.touches[1];
+        var dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+        var midX = (t1.clientX + t2.clientX) / 2;
+        var midY = (t1.clientY + t2.clientY) / 2;
+        var oldZoom = userZoom;
+        userZoom = Math.max(1, Math.min(5, userZoom * (dist / lastDist)));
+        var vw = window.innerWidth, vh = window.innerHeight;
+        var baseScale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+        var cx = (vw - DESIGN_W * baseScale) / 2;
+        var cy = (vh - DESIGN_H * baseScale) / 2;
+        var ratio = userZoom / oldZoom;
+        panX = panX * ratio + (1 - ratio) * (midX - cx);
+        panY = panY * ratio + (1 - ratio) * (midY - cy);
+        panX += midX - lastMidX;
+        panY += midY - lastMidY;
+        lastDist = dist; lastMidX = midX; lastMidY = midY;
+        scaleToFit();
+    }, { passive: false });
+    document.addEventListener('touchend', function(e) {
+        if (e.touches.length < 2) pinching = false;
+        if (userZoom <= 1.05) { userZoom = 1; panX = 0; panY = 0; scaleToFit(); }
+        if (e.touches.length === 0) {
+            var now = Date.now();
+            if (now - lastTap < 300 && userZoom > 1) { userZoom = 1; panX = 0; panY = 0; scaleToFit(); }
+            lastTap = now;
+        }
+    });
+})();
+
+// ============ TEXTS ============
+const texts = {
+    fr: {
+        open: { title: "⚫ Circuit Ouvert", desc: "Le circuit est ouvert. L'énergie chimique reste stockée dans la pile. Fermez l'interrupteur pour allumer la lampe." },
+        closed: { title: "✅ Circuit Fermé", desc: "Le circuit est fermé ! Les réactions chimiques produisent un courant électrique. La lampe brille ⚡" },
+        empty: { title: "🔋 Pile Épuisée", desc: "La pile est vide ! Les réactifs chimiques sont épuisés. Installez une nouvelle pile." },
+        labels: { battery: "Pile (énergie chimique)", pos: "Borne +", neg: "Borne −", switch: "Interrupteur", lamp: "Lampe", culot: "Culot", plot: "Plot", wireRed: "Fil rouge (+)", wireBlack: "Fil noir (−)" }
+    },
+    ar: {
+        open: { title: "⚫ دارة مفتوحة", desc: "الدارة مفتوحة. الطاقة الكيميائية تبقى مخزنة في البطارية. أغلق المفتاح لإضاءة المصباح." },
+        closed: { title: "✅ دارة مغلقة", desc: "الدارة مغلقة! التفاعلات الكيميائية تنتج تياراً كهربائياً. المصباح يضيء ⚡" },
+        empty: { title: "🔋 بطارية فارغة", desc: "البطارية فارغة! المواد الكيميائية استُهلكت. ركب بطارية جديدة." },
+        labels: { battery: "بطارية (طاقة كيميائية)", pos: "القطب +", neg: "القطب −", switch: "مفتاح كهربائي", lamp: "مصباح", culot: "القلنسوة", plot: "النقطة", wireRed: "سلك أحمر (+)", wireBlack: "سلك أسود (−)" }
+    }
+};
+
+// ============ CONTROLS ============
+function toggleCircuit() {
+    if (chemicalEnergy <= 0) return;
+    circuitClosed = !circuitClosed;
+    updateAll();
+}
+
+function resetBattery() {
+    chemicalEnergy = 100;
+    circuitClosed = false;
+    updateAll();
+}
+
+// ============ DYNAMIC LABEL SIZING ============
+function adjustLabelRects() {
+    document.querySelectorAll('.label-group').forEach(function(g) {
+        var text = g.querySelector('text');
+        var rect = g.querySelector('rect');
+        if (text && rect) {
+            var bbox = text.getBBox();
+            rect.setAttribute('x', bbox.x - 6);
+            rect.setAttribute('y', bbox.y - 2);
+            rect.setAttribute('width', bbox.width + 12);
+            rect.setAttribute('height', bbox.height + 4);
+        }
+    });
+}
+
+// ============ UPDATE ALL ============
+function updateAll() {
+    var active = circuitClosed && chemicalEnergy > 0;
+
+    // Switch blade
+    document.getElementById('switch-blade').style.transform =
+        circuitClosed ? 'rotate(0deg)' : 'rotate(-45deg)';
+
+    // Electrons
+    document.getElementById('electrons-red').style.display = active ? '' : 'none';
+    document.getElementById('electrons-black').style.display = active ? '' : 'none';
+
+    // Bubbles
+    document.getElementById('bubbles').style.display = active ? '' : 'none';
+
+    // Chemical energy level
+    var h = 186 * chemicalEnergy / 100;
+    var y = 198 + 186 - h;
+    var chemLevel = document.getElementById('chem-level');
+    chemLevel.setAttribute('y', y);
+    chemLevel.setAttribute('height', h);
+    chemLevel.setAttribute('fill', chemicalEnergy > 30 ? 'url(#chemGrad)' : 'url(#chemGradLow)');
+
+    // Energy bar
+    var bar = document.getElementById('energy-bar');
+    bar.style.width = chemicalEnergy + '%';
+    document.getElementById('energy-percentage').textContent = Math.round(chemicalEnergy) + '%';
+    if (chemicalEnergy > 60) bar.style.background = 'linear-gradient(90deg,#00BCD4,#0097A7)';
+    else if (chemicalEnergy > 30) bar.style.background = 'linear-gradient(90deg,#FF9800,#F57C00)';
+    else bar.style.background = 'linear-gradient(90deg,#F44336,#D32F2F)';
+
+    // Lamp
+    var glow = document.getElementById('lamp-glow');
+    var glass = document.getElementById('bulb-glass');
+    var filament = document.getElementById('filament');
+    if (active) {
+        var b = chemicalEnergy / 100;
+        glow.setAttribute('opacity', (b * 0.7).toString());
+        glow.classList.add('glow-active');
+        glass.setAttribute('fill', 'rgba(255,255,200,' + (0.2 + b * 0.3) + ')');
+        filament.setAttribute('stroke', '#FFD700');
+        filament.setAttribute('stroke-width', '2.5');
+        filament.style.filter = 'drop-shadow(0 0 ' + (b * 12) + 'px rgba(255,200,50,0.8))';
+    } else {
+        glow.setAttribute('opacity', '0');
+        glow.classList.remove('glow-active');
+        glass.setAttribute('fill', 'rgba(240,240,240,0.2)');
+        filament.setAttribute('stroke', '#888');
+        filament.setAttribute('stroke-width', '1.5');
+        filament.style.filter = 'none';
+    }
+
+    // Switch button
+    var switchBtn = document.getElementById('circuit-switch-btn');
+    var switchSpan = switchBtn.querySelector('span');
+    switchBtn.style.background = circuitClosed ? '#27ae60' : '#e74c3c';
+    var attr = (circuitClosed ? currentLang + 'On' : currentLang + 'Off');
+    switchSpan.textContent = switchSpan.dataset[attr];
+
+    // Info panel
+    var t = texts[currentLang];
+    var infoTitle = document.getElementById('info-title');
+    var infoText = document.getElementById('info-text');
+    if (chemicalEnergy <= 0) { infoTitle.textContent = t.empty.title; infoText.textContent = t.empty.desc; }
+    else if (circuitClosed) { infoTitle.textContent = t.closed.title; infoText.textContent = t.closed.desc; }
+    else { infoTitle.textContent = t.open.title; infoText.textContent = t.open.desc; }
+
+    // Labels
+    var L = t.labels;
+    document.getElementById('label-battery').textContent = L.battery;
+    document.getElementById('label-pos').textContent = L.pos;
+    document.getElementById('label-neg').textContent = L.neg;
+    document.getElementById('label-switch').textContent = L.switch;
+    document.getElementById('label-lamp').textContent = L.lamp;
+    document.getElementById('label-culot').textContent = L.culot;
+    document.getElementById('label-plot').textContent = L.plot;
+    document.getElementById('label-wire-red').textContent = L.wireRed;
+    document.getElementById('label-wire-black').textContent = L.wireBlack;
+    adjustLabelRects();
+}
+
+// ============ ENERGY DRAIN LOOP ============
+function tick() {
+    if (circuitClosed && chemicalEnergy > 0) {
+        chemicalEnergy -= 0.05;
+        if (chemicalEnergy < 0) chemicalEnergy = 0;
+        if (chemicalEnergy <= 0) {
+            circuitClosed = false;
+        }
+        updateAll();
+    }
+    requestAnimationFrame(tick);
+}
+
+// ============ LANGUAGE ============
+function toggleLanguage() {
+    currentLang = currentLang === 'fr' ? 'ar' : 'fr';
+    var html = document.documentElement;
+    if (currentLang === 'ar') {
+        html.setAttribute('dir', 'rtl'); html.setAttribute('lang', 'ar');
+        document.getElementById('lang-label').textContent = 'Français';
+    } else {
+        html.setAttribute('dir', 'ltr'); html.setAttribute('lang', 'fr');
+        document.getElementById('lang-label').textContent = 'العربية';
+    }
+    document.querySelectorAll('[data-fr]').forEach(function(el) {
+        if (el.dataset[currentLang]) el.textContent = el.dataset[currentLang];
+    });
+    updateAll();
+}
+
+// ============ FULLSCREEN ============
+function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+        document.body.requestFullscreen().then(function() {
+            document.body.classList.add('fullscreen-mode');
+            if (screen.orientation && screen.orientation.lock) screen.orientation.lock('landscape').catch(function(){});
+            scaleToFit();
+        }).catch(function(){});
+    } else {
+        document.exitFullscreen();
+        document.body.classList.remove('fullscreen-mode');
+    }
+}
+document.addEventListener('fullscreenchange', function() {
+    if (!document.fullscreenElement) document.body.classList.remove('fullscreen-mode');
+    scaleToFit();
+});
+
+// ============ INIT ============
+updateAll();
+tick();
+</script>
+</body>
+</html>

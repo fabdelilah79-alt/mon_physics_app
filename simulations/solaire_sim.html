@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="fr" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulation Énergie Solaire | محاكاة الطاقة الشمسية</title>
+    <script src="../libs/tailwindcss.js"></script>
+    <style>
+        html, body { margin: 0; overflow: hidden; background: #000; width: 100%; height: 100%; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+
+        /* === FIXED DESIGN SIZE === */
+        #sim-wrapper {
+            width: 1024px;
+            height: 640px;
+            position: absolute;
+            transform-origin: top left;
+            overflow: hidden;
+        }
+
+        /* Animations */
+        @keyframes rain {
+            0% { transform: translateY(-20px); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: translateY(380px); opacity: 0; }
+        }
+        @keyframes drift {
+            0% { transform: translateX(0px); }
+            50% { transform: translateX(-40px); }
+            100% { transform: translateX(0px); }
+        }
+        @keyframes spin-slow {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+
+        .animate-rain { animation: rain 1.5s linear infinite; }
+        .animate-drift-1 { animation: drift 6s ease-in-out infinite; }
+        .animate-drift-2 { animation: drift 8s ease-in-out infinite reverse; }
+        .animate-drift-3 { animation: drift 7s ease-in-out infinite; }
+        .animate-spin-slow { animation: spin-slow 10s linear infinite; }
+        .animate-twinkle { animation: twinkle 2s ease-in-out infinite; }
+
+        /* Fan blade spin */
+        @keyframes fan-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        #fan-blades {
+            transform-box: fill-box;
+            transform-origin: center;
+        }
+        .fan-spinning { animation: fan-spin var(--fan-speed, 2s) linear infinite; }
+        .fan-stopped { animation: none; }
+
+        /* Sky transition */
+        #sky { transition: background-color 1s ease; }
+        #ground { transition: background-color 1s ease; }
+
+        /* Sun/Moon transitions */
+        #sun-area { transition: transform 1s ease, opacity 1s ease; }
+        #moon-area { transition: transform 1s ease, opacity 1s ease; }
+        #clouds-area { transition: opacity 1s ease; }
+        #sun-svg { transition: opacity 0.5s, transform 0.5s; }
+
+        /* Language Switcher */
+        #btn-lang {
+            position: absolute;
+            top: 12px;
+            right: 12px;
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #3498db;
+            border-radius: 8px;
+            padding: 6px 14px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            color: #2c3e50;
+            z-index: 50;
+        }
+        #btn-lang:hover { background: #3498db; color: white; }
+        html[dir="rtl"] #btn-lang { right: auto; left: 12px; }
+        html[dir="rtl"] .controls-panel { left: auto !important; right: 24px; }
+    </style>
+</head>
+<body>
+<div id="sim-wrapper">
+
+    <!-- Language Switcher -->
+    <button id="btn-lang" onclick="toggleLanguage()">
+        <span id="lang-label">العربية</span>
+    </button>
+
+    <!-- ===== SKY ===== -->
+    <div id="sky" class="absolute inset-0 bg-sky-400 select-none">
+
+        <!-- SUN -->
+        <div id="sun-area" class="absolute" style="top:30px; right:50px;">
+            <div class="relative">
+                <!-- Glow -->
+                <div id="sun-glow" class="absolute rounded-full bg-yellow-400" style="width:140px;height:140px;top:-10px;left:-10px;filter:blur(20px);opacity:0.5;animation:twinkle 2s ease-in-out infinite;"></div>
+                <!-- Sun SVG -->
+                <svg id="sun-svg" width="120" height="120" viewBox="0 0 24 24" fill="#FDB813" stroke="#FDB813" stroke-width="0.5" class="animate-spin-slow">
+                    <circle cx="12" cy="12" r="5"/>
+                    <line x1="12" y1="1" x2="12" y2="4" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="12" y1="20" x2="12" y2="23" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="1" y1="12" x2="4" y2="12" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="20" y1="12" x2="23" y2="12" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="4.22" y1="4.22" x2="6.34" y2="6.34" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="17.66" y1="17.66" x2="19.78" y2="19.78" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="4.22" y1="19.78" x2="6.34" y2="17.66" stroke-width="2" stroke-linecap="round"/>
+                    <line x1="17.66" y1="6.34" x2="19.78" y2="4.22" stroke-width="2" stroke-linecap="round"/>
+                </svg>
+                <!-- Sun rays (light particles falling) -->
+                <div id="sun-rays" class="absolute overflow-hidden pointer-events-none" style="top:120px;left:10px;width:160px;height:300px;">
+                    <div class="absolute bg-yellow-200 rounded-full animate-rain" style="width:4px;height:48px;left:0%;opacity:0.6;"></div>
+                    <div class="absolute bg-yellow-200 rounded-full animate-rain" style="width:4px;height:48px;left:20%;opacity:0.6;animation-delay:0.2s;"></div>
+                    <div class="absolute bg-yellow-200 rounded-full animate-rain" style="width:4px;height:48px;left:40%;opacity:0.6;animation-delay:0.4s;"></div>
+                    <div class="absolute bg-yellow-200 rounded-full animate-rain" style="width:4px;height:48px;left:60%;opacity:0.6;animation-delay:0.6s;"></div>
+                    <div class="absolute bg-yellow-200 rounded-full animate-rain" style="width:4px;height:48px;left:80%;opacity:0.6;animation-delay:0.8s;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- MOON -->
+        <div id="moon-area" class="absolute" style="top:30px; right:80px; opacity:0; transform:translateY(-40px);">
+            <svg width="80" height="80" viewBox="0 0 24 24" style="filter:drop-shadow(0 0 15px rgba(255,255,255,0.5));">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="#F8FAFC" stroke="#F8FAFC" stroke-width="0.5"/>
+            </svg>
+        </div>
+
+        <!-- CLOUDS -->
+        <div id="clouds-area" class="absolute pointer-events-none" style="top:0;right:0;width:512px;height:320px;opacity:0;z-index:20;">
+            <div class="absolute animate-drift-1" style="top:30px;right:64px;">
+                <svg id="cloud1" width="150" height="100" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="0.5"/></svg>
+            </div>
+            <div class="absolute animate-drift-2" style="top:10px;right:192px;">
+                <svg id="cloud2" width="110" height="75" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" fill="#e2e8f0" stroke="#e2e8f0" stroke-width="0.5"/></svg>
+            </div>
+            <div class="absolute animate-drift-3" style="top:100px;right:32px;">
+                <svg id="cloud3" width="90" height="60" viewBox="0 0 24 24"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" fill="#f1f5f9" stroke="#f1f5f9" stroke-width="0.5"/></svg>
+            </div>
+        </div>
+
+        <!-- STARS -->
+        <div id="stars-container" class="absolute inset-0 pointer-events-none" style="display:none;"></div>
+
+        <!-- ===== CONTROLS ===== -->
+        <div class="controls-panel absolute bg-white/80 rounded-xl shadow-xl backdrop-blur-sm border border-slate-200" style="top:24px;left:24px;padding:16px;z-index:30;width:210px;">
+            <h1 class="text-slate-800 font-bold text-lg mb-3 flex items-center gap-2">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                <span data-fr="Contrôles" data-ar="التحكم">Contrôles</span>
+            </h1>
+
+            <!-- Clouds button -->
+            <button id="btn-clouds" onclick="toggleClouds()" class="flex items-center gap-3 px-3 py-2 rounded-lg font-semibold shadow-sm border-2 bg-white border-slate-200 text-slate-600 cursor-pointer w-full mb-3 text-sm" style="transition:all 0.2s;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/></svg>
+                <span data-fr-on="Nuages: ACTIFS" data-fr-off="Nuages: INACTIFS" data-ar-on="غيوم: مفعّلة" data-ar-off="غيوم: غير مفعّلة">Nuages: INACTIFS</span>
+            </button>
+
+            <!-- Night button -->
+            <button id="btn-night" onclick="toggleNight()" class="flex items-center gap-3 px-3 py-2 rounded-lg font-semibold shadow-sm border-2 bg-yellow-100 border-yellow-300 text-yellow-800 cursor-pointer w-full mb-4 text-sm" style="transition:all 0.2s;">
+                <svg id="night-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+                <span data-fr-on="Mode: NUIT" data-fr-off="Mode: JOUR" data-ar-on="الوضع: ليل" data-ar-off="الوضع: نهار">Mode: JOUR</span>
+            </button>
+
+            <!-- Device switcher button -->
+            <button id="btn-device" onclick="toggleDevice()" class="flex items-center gap-3 px-3 py-2 rounded-lg font-semibold shadow-sm border-2 bg-emerald-100 border-emerald-300 text-emerald-800 cursor-pointer w-full mb-4 text-sm" style="transition:all 0.2s;">
+                <svg id="device-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                <span data-fr-lamp="Appareil: Lampe" data-fr-fan="Appareil: Ventilateur" data-ar-lamp="الجهاز: مصباح" data-ar-fan="الجهاز: مروحة">Appareil: Lampe</span>
+            </button>
+
+            <!-- Energy bar -->
+            <div class="border-t pt-3 border-slate-300">
+                <div class="flex justify-between text-sm font-bold text-slate-700 mb-1">
+                    <span data-fr="Production" data-ar="الإنتاج">Production</span>
+                    <span id="energy-text">100%</span>
+                </div>
+                <div class="w-full h-4 bg-slate-300 rounded-full overflow-hidden border border-slate-400">
+                    <div id="energy-bar" class="h-full bg-gradient-to-r from-orange-400 to-yellow-400" style="width:100%;transition:width 0.7s ease-out;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===== GROUND ===== -->
+        <div id="ground" class="absolute w-full bg-green-500" style="bottom:0;height:213px;">
+            <div class="w-full bg-black/10" style="height:16px;"></div>
+        </div>
+
+        <!-- ===== MAIN SYSTEM (wires + panel + lamp) ===== -->
+        <div class="absolute inset-0 pointer-events-none" style="z-index:10;">
+
+            <!-- WIRES SVG -->
+            <svg class="absolute pointer-events-none" style="width:1024px;height:640px;" viewBox="0 0 1024 640">
+                <!-- Positive wire (Red) — panel → down → left → up to socket -->
+                <path id="wirePos" d="M 790 410 L 790 575 L 285 575 L 285 560" fill="none" stroke="#D00000" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+                <!-- Negative wire (Black) — socket → down → right → up to panel -->
+                <path id="wireNeg" d="M 265 560 L 265 595 L 775 595 L 775 410" fill="none" stroke="#333" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+
+                <!-- Electrons (positive wire) -->
+                <g id="electrons-pos">
+                    <circle r="5" fill="#FFFF00"><animateMotion repeatCount="indefinite" dur="2.5s"><mpath href="#wirePos"/></animateMotion></circle>
+                    <circle r="5" fill="#FFFF00"><animateMotion repeatCount="indefinite" dur="2.5s" begin="-0.8s"><mpath href="#wirePos"/></animateMotion></circle>
+                    <circle r="5" fill="#FFFF00"><animateMotion repeatCount="indefinite" dur="2.5s" begin="-1.6s"><mpath href="#wirePos"/></animateMotion></circle>
+                </g>
+                <!-- Electrons (negative wire) -->
+                <g id="electrons-neg">
+                    <circle r="5" fill="#FFFF00"><animateMotion repeatCount="indefinite" dur="2.5s"><mpath href="#wireNeg"/></animateMotion></circle>
+                    <circle r="5" fill="#FFFF00"><animateMotion repeatCount="indefinite" dur="2.5s" begin="-1.2s"><mpath href="#wireNeg"/></animateMotion></circle>
+                </g>
+            </svg>
+
+            <!-- SOLAR PANEL -->
+            <div class="absolute pointer-events-auto cursor-pointer" id="panel-group" style="bottom:135px;right:100px;">
+                <!-- Support post -->
+                <div class="bg-gray-400 absolute" style="width:16px;height:96px;left:50%;transform:translateX(-50%);top:160px;"></div>
+                <!-- Support base -->
+                <div class="bg-gray-500 rounded absolute" style="width:96px;height:16px;left:50%;transform:translateX(-50%);top:256px;"></div>
+                <!-- Panel body -->
+                <div id="solar-panel" class="relative bg-blue-900 border-4 border-gray-300 rounded-lg shadow-2xl" style="width:256px;height:160px;transform:rotate(-12deg);transition:filter 0.5s;">
+                    <!-- Photovoltaic grid (4x3 = 12 cells) -->
+                    <div id="pv-grid" class="grid grid-cols-4 grid-rows-3 w-full h-full gap-1 p-1">
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                        <div class="pv-cell border border-white/20 rounded-sm bg-blue-600/80"></div>
+                    </div>
+                    <!-- Reflection -->
+                    <div class="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent pointer-events-none rounded-lg"></div>
+                </div>
+            </div>
+
+            <!-- LAMP (visible by default) -->
+            <div id="device-lamp" class="absolute flex flex-col items-center" style="bottom:30px;left:195px;z-index:10;">
+                <!-- Halo -->
+                <div id="lamp-halo" class="absolute rounded-full bg-yellow-300 pointer-events-none" style="top:-80px;width:280px;height:280px;filter:blur(80px);opacity:0.8;transition:opacity 0.3s;"></div>
+
+                <!-- Bulb SVG -->
+                <div class="relative" style="width:128px;height:160px;margin-bottom:-16px;z-index:0;">
+                    <svg viewBox="0 0 100 145" class="w-full h-full overflow-visible" style="filter:drop-shadow(0 10px 15px rgba(0,0,0,0.2));">
+                        <!-- Socket (screw base) -->
+                        <path d="M 35 100 L 35 125 Q 35 130 50 130 Q 65 130 65 125 L 65 100 Z" fill="#94a3b8" stroke="#475569" stroke-width="2"/>
+                        <!-- Threading -->
+                        <line x1="35" y1="106" x2="65" y2="106" stroke="#cbd5e1" stroke-width="2" opacity="0.6"/>
+                        <line x1="35" y1="112" x2="65" y2="112" stroke="#cbd5e1" stroke-width="2" opacity="0.6"/>
+                        <line x1="35" y1="118" x2="65" y2="118" stroke="#cbd5e1" stroke-width="2" opacity="0.6"/>
+                        <!-- Insulator -->
+                        <path d="M 40 130 L 60 130 L 55 135 L 45 135 Z" fill="#1e293b"/>
+                        <!-- Contact point -->
+                        <path d="M 45 135 L 55 135 L 50 142 Z" fill="#fbbf24" stroke="#d97706" stroke-width="1"/>
+                        <!-- Globe -->
+                        <path id="bulb-globe" d="M 15 60 Q 15 10 50 10 Q 85 10 85 60 Q 85 85 65 100 L 35 100 Q 15 85 15 60 Z"
+                              fill="rgba(255,255,200,0.4)" stroke="#cbd5e1" stroke-width="2"/>
+                        <!-- Filament wires -->
+                        <path d="M 40 100 L 40 70 L 50 60 L 60 70 L 60 100" fill="none" stroke="#64748b" stroke-width="1"/>
+                        <!-- Filament glow -->
+                        <circle id="filament-glow" cx="50" cy="60" r="5" fill="#FFFF00" stroke="#FDE047"
+                                style="transition:all 0.3s;filter:drop-shadow(0 0 20px yellow);"/>
+                    </svg>
+                </div>
+
+                <!-- Socket holder -->
+                <div class="bg-slate-800 rounded-lg border-2 border-slate-600 shadow-md flex items-center justify-center" style="width:64px;height:48px;z-index:10;position:relative;">
+                    <div class="rounded-full bg-slate-400 shadow-inner" style="width:8px;height:8px;margin:0 4px;"></div>
+                    <div class="rounded-full bg-slate-400 shadow-inner" style="width:8px;height:8px;margin:0 4px;"></div>
+                </div>
+
+                <!-- Base -->
+                <div class="bg-slate-700 rounded-t-lg shadow-lg border-t border-slate-600" style="width:160px;height:32px;margin-top:-8px;z-index:0;"></div>
+            </div>
+
+            <!-- FAN (hidden by default) -->
+            <div id="device-fan" class="absolute flex flex-col items-center" style="bottom:30px;left:195px;z-index:10;display:none;">
+                <!-- Fan SVG -->
+                <svg width="160" height="160" viewBox="0 0 160 160" style="filter:drop-shadow(0 8px 12px rgba(0,0,0,0.3));">
+                    <!-- Protective cage (circular guard) -->
+                    <circle cx="80" cy="80" r="72" fill="none" stroke="#94a3b8" stroke-width="4"/>
+                    <circle cx="80" cy="80" r="68" fill="none" stroke="#cbd5e1" stroke-width="1" stroke-dasharray="4 4"/>
+                    <!-- Guard grid lines -->
+                    <line x1="80" y1="8" x2="80" y2="152" stroke="#cbd5e1" stroke-width="1" opacity="0.3"/>
+                    <line x1="8" y1="80" x2="152" y2="80" stroke="#cbd5e1" stroke-width="1" opacity="0.3"/>
+                    <line x1="28" y1="28" x2="132" y2="132" stroke="#cbd5e1" stroke-width="1" opacity="0.3"/>
+                    <line x1="132" y1="28" x2="28" y2="132" stroke="#cbd5e1" stroke-width="1" opacity="0.3"/>
+                    <!-- Blades group (rotates) -->
+                    <g id="fan-blades" class="fan-stopped">
+                        <!-- Blade 1 (top) -->
+                        <path d="M 80 80 Q 60 40 80 14 Q 100 40 80 80" fill="#3b82f6" stroke="#2563eb" stroke-width="1" opacity="0.85"/>
+                        <!-- Blade 2 (right) -->
+                        <path d="M 80 80 Q 120 60 146 80 Q 120 100 80 80" fill="#3b82f6" stroke="#2563eb" stroke-width="1" opacity="0.85"/>
+                        <!-- Blade 3 (bottom) -->
+                        <path d="M 80 80 Q 100 120 80 146 Q 60 120 80 80" fill="#3b82f6" stroke="#2563eb" stroke-width="1" opacity="0.85"/>
+                        <!-- Blade 4 (left) -->
+                        <path d="M 80 80 Q 40 100 14 80 Q 40 60 80 80" fill="#3b82f6" stroke="#2563eb" stroke-width="1" opacity="0.85"/>
+                    </g>
+                    <!-- Center hub -->
+                    <circle cx="80" cy="80" r="10" fill="#475569" stroke="#334155" stroke-width="2"/>
+                    <circle cx="80" cy="80" r="4" fill="#94a3b8"/>
+                </svg>
+                <!-- Motor body -->
+                <div class="bg-slate-700 rounded-lg shadow-md flex items-center justify-center" style="width:60px;height:36px;margin-top:-6px;z-index:10;position:relative;border:2px solid #475569;">
+                    <div class="rounded-full bg-green-500" id="fan-led" style="width:8px;height:8px;box-shadow:0 0 6px #22c55e;transition:all 0.3s;"></div>
+                </div>
+                <!-- Stand post -->
+                <div class="bg-slate-600" style="width:12px;height:50px;margin-top:-2px;"></div>
+                <!-- Stand base -->
+                <div class="bg-slate-700 rounded-full shadow-lg" style="width:100px;height:16px;margin-top:-2px;border:2px solid #475569;"></div>
+            </div>
+
+        </div><!-- end main system -->
+
+    </div><!-- end sky -->
+
+</div><!-- end #sim-wrapper -->
+
+<script>
+    // ========== STATE ==========
+    let isNight = false;
+    let isCloudy = false;
+    let energyLevel = 100;
+    let currentLang = 'fr';
+    let currentDevice = 'lamp'; // 'lamp' or 'fan'
+
+    // ========== FIXED DESIGN SIZE + PINCH-TO-ZOOM ==========
+    const DESIGN_W = 1024, DESIGN_H = 640;
+    const wrapper = document.getElementById('sim-wrapper');
+    let userZoom = 1, panX = 0, panY = 0;
+
+    function scaleToFit() {
+        const vw = window.innerWidth, vh = window.innerHeight;
+        const baseScale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+        const totalScale = baseScale * userZoom;
+        wrapper.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + totalScale + ')';
+        wrapper.style.left = ((vw - DESIGN_W * baseScale) / 2) + 'px';
+        wrapper.style.top = ((vh - DESIGN_H * baseScale) / 2) + 'px';
+    }
+    scaleToFit();
+    window.addEventListener('resize', function() { userZoom = 1; panX = 0; panY = 0; scaleToFit(); });
+
+    (function() {
+        var pinching = false, lastDist = 0, lastMidX = 0, lastMidY = 0, lastTap = 0;
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                pinching = true;
+                var t1 = e.touches[0], t2 = e.touches[1];
+                lastDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                lastMidX = (t1.clientX + t2.clientX) / 2;
+                lastMidY = (t1.clientY + t2.clientY) / 2;
+            }
+        }, { passive: false });
+        document.addEventListener('touchmove', function(e) {
+            if (!pinching || e.touches.length !== 2) return;
+            e.preventDefault();
+            var t1 = e.touches[0], t2 = e.touches[1];
+            var dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+            var midX = (t1.clientX + t2.clientX) / 2;
+            var midY = (t1.clientY + t2.clientY) / 2;
+            var oldZoom = userZoom;
+            userZoom = Math.max(1, Math.min(5, userZoom * (dist / lastDist)));
+            var vw = window.innerWidth, vh = window.innerHeight;
+            var baseScale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+            var cx = (vw - DESIGN_W * baseScale) / 2;
+            var cy = (vh - DESIGN_H * baseScale) / 2;
+            var ratio = userZoom / oldZoom;
+            panX = panX * ratio + (1 - ratio) * (midX - cx);
+            panY = panY * ratio + (1 - ratio) * (midY - cy);
+            panX += midX - lastMidX;
+            panY += midY - lastMidY;
+            lastDist = dist; lastMidX = midX; lastMidY = midY;
+            scaleToFit();
+        }, { passive: false });
+        document.addEventListener('touchend', function(e) {
+            if (e.touches.length < 2) pinching = false;
+            if (userZoom <= 1.05) { userZoom = 1; panX = 0; panY = 0; scaleToFit(); }
+            if (e.touches.length === 0) {
+                var now = Date.now();
+                if (now - lastTap < 300 && userZoom > 1) { userZoom = 1; panX = 0; panY = 0; scaleToFit(); }
+                lastTap = now;
+            }
+        });
+    })();
+
+    // ========== STARS (generated once) ==========
+    const starsContainer = document.getElementById('stars-container');
+    for (let i = 0; i < 20; i++) {
+        const star = document.createElement('div');
+        star.className = 'absolute bg-white rounded-full animate-twinkle';
+        star.style.top = (Math.random() * 40) + '%';
+        star.style.left = (Math.random() * 100) + '%';
+        const size = (Math.random() * 3 + 1) + 'px';
+        star.style.width = size;
+        star.style.height = size;
+        star.style.animationDelay = (Math.random() * 2) + 's';
+        starsContainer.appendChild(star);
+    }
+
+    // ========== UPDATE SIMULATION ==========
+    function updateSimulation() {
+        // --- Energy logic (from React useEffect) ---
+        if (isNight) energyLevel = 0;
+        else if (isCloudy) energyLevel = 40;
+        else energyLevel = 100;
+
+        // --- Sky color ---
+        const sky = document.getElementById('sky');
+        const ground = document.getElementById('ground');
+        if (isNight) {
+            sky.style.backgroundColor = '#0f172a';       // slate-900
+            ground.style.backgroundColor = '#064e3b';     // emerald-900
+        } else if (isCloudy) {
+            sky.style.backgroundColor = '#cbd5e1';       // slate-300
+            ground.style.backgroundColor = '#22c55e';     // green-500
+        } else {
+            sky.style.backgroundColor = '#38bdf8';       // sky-400
+            ground.style.backgroundColor = '#22c55e';     // green-500
+        }
+
+        // --- Sun ---
+        const sunArea = document.getElementById('sun-area');
+        const sunGlow = document.getElementById('sun-glow');
+        const sunRays = document.getElementById('sun-rays');
+        const sunSvg = document.getElementById('sun-svg');
+
+        if (isNight) {
+            sunArea.style.transform = 'translateY(384px)';
+            sunArea.style.opacity = '0';
+        } else {
+            sunArea.style.transform = 'translateY(0)';
+            sunArea.style.opacity = '1';
+        }
+
+        if (isCloudy) {
+            sunGlow.style.display = 'none';
+            sunRays.style.display = 'none';
+            sunSvg.style.opacity = '0.5';
+            sunSvg.style.transform = 'scale(0.9)';
+            sunSvg.classList.remove('animate-spin-slow');
+        } else {
+            sunGlow.style.display = 'block';
+            sunRays.style.display = isNight ? 'none' : 'block';
+            sunSvg.style.opacity = '1';
+            sunSvg.style.transform = 'scale(1)';
+            if (!isNight) sunSvg.classList.add('animate-spin-slow');
+        }
+
+        // --- Moon ---
+        const moonArea = document.getElementById('moon-area');
+        if (isNight) {
+            moonArea.style.opacity = '1';
+            moonArea.style.transform = 'translateY(0)';
+        } else {
+            moonArea.style.opacity = '0';
+            moonArea.style.transform = 'translateY(-40px)';
+        }
+
+        // --- Clouds ---
+        document.getElementById('clouds-area').style.opacity = isCloudy ? '1' : '0';
+
+        // Cloud colors at night
+        const cloudColors = isNight
+            ? ['#475569', '#64748b', '#334155']
+            : ['#FFFFFF', '#e2e8f0', '#f1f5f9'];
+        ['cloud1', 'cloud2', 'cloud3'].forEach((id, i) => {
+            const path = document.getElementById(id).querySelector('path');
+            path.setAttribute('fill', cloudColors[i]);
+            path.setAttribute('stroke', cloudColors[i]);
+        });
+
+        // --- Stars ---
+        starsContainer.style.display = isNight ? 'block' : 'none';
+
+        // --- Wires ---
+        document.getElementById('wirePos').setAttribute('stroke', isNight ? '#550000' : '#D00000');
+        document.getElementById('wireNeg').setAttribute('stroke', isNight ? '#222' : '#333');
+
+        // --- Electrons ---
+        document.getElementById('electrons-pos').style.display = energyLevel > 0 ? '' : 'none';
+        document.getElementById('electrons-neg').style.display = energyLevel > 0 ? '' : 'none';
+
+        // --- Solar panel ---
+        document.getElementById('solar-panel').style.filter = isNight ? 'brightness(0.5)' : 'brightness(1)';
+        document.querySelectorAll('.pv-cell').forEach(cell => {
+            if (energyLevel > 0) {
+                cell.classList.remove('bg-blue-950');
+                cell.classList.add('bg-blue-600/80');
+            } else {
+                cell.classList.remove('bg-blue-600/80');
+                cell.classList.add('bg-blue-950');
+            }
+        });
+
+        // --- Device visibility ---
+        document.getElementById('device-lamp').style.display = currentDevice === 'lamp' ? 'flex' : 'none';
+        document.getElementById('device-fan').style.display = currentDevice === 'fan' ? 'flex' : 'none';
+
+        // --- Lamp ---
+        if (currentDevice === 'lamp') {
+            const lightOpacity = energyLevel / 100;
+            document.getElementById('lamp-halo').style.opacity = (lightOpacity * 0.8).toString();
+
+            const globe = document.getElementById('bulb-globe');
+            globe.setAttribute('fill', energyLevel > 0 ? 'rgba(255,255,200,0.4)' : 'rgba(255,255,255,0.1)');
+
+            const filament = document.getElementById('filament-glow');
+            filament.setAttribute('fill', energyLevel > 0 ? '#FFFF00' : '#333');
+            filament.setAttribute('stroke', energyLevel > 0 ? '#FDE047' : '#555');
+            filament.style.filter = energyLevel > 0 ? 'drop-shadow(0 0 ' + (energyLevel / 5) + 'px yellow)' : 'none';
+        }
+
+        // --- Fan ---
+        if (currentDevice === 'fan') {
+            const blades = document.getElementById('fan-blades');
+            const led = document.getElementById('fan-led');
+            if (energyLevel > 0) {
+                // Speed: 100% → 0.4s (fast), 40% → 1.5s (slow)
+                const speed = (1.9 - energyLevel * 0.015) + 's';
+                blades.style.setProperty('--fan-speed', speed);
+                blades.setAttribute('class', 'fan-spinning');
+                led.style.backgroundColor = '#22c55e';
+                led.style.boxShadow = '0 0 6px #22c55e';
+            } else {
+                blades.setAttribute('class', 'fan-stopped');
+                led.style.backgroundColor = '#555';
+                led.style.boxShadow = 'none';
+            }
+        }
+
+        // --- Energy bar ---
+        document.getElementById('energy-bar').style.width = energyLevel + '%';
+        document.getElementById('energy-text').textContent = energyLevel + '%';
+
+        // --- Buttons visual state ---
+        updateButtons();
+    }
+
+    // ========== BUTTON STATES ==========
+    function updateButtons() {
+        const lang = currentLang;
+        const btnClouds = document.getElementById('btn-clouds');
+        const btnNight = document.getElementById('btn-night');
+        const cloudsSpan = btnClouds.querySelector('span');
+        const nightSpan = btnNight.querySelector('span');
+        const nightIcon = document.getElementById('night-icon');
+
+        // Clouds button
+        if (isCloudy) {
+            btnClouds.className = 'flex items-center gap-3 px-3 py-2 rounded-lg font-semibold shadow-sm border-2 bg-slate-200 border-slate-400 text-slate-700 cursor-pointer w-full mb-3 text-sm';
+            cloudsSpan.textContent = cloudsSpan.dataset[lang + 'On'];
+        } else {
+            btnClouds.className = 'flex items-center gap-3 px-3 py-2 rounded-lg font-semibold shadow-sm border-2 bg-white border-slate-200 text-slate-600 cursor-pointer w-full mb-3 text-sm';
+            cloudsSpan.textContent = cloudsSpan.dataset[lang + 'Off'];
+        }
+
+        // Night button
+        if (isNight) {
+            btnNight.className = 'flex items-center gap-3 px-3 py-2 rounded-lg font-semibold shadow-sm border-2 bg-indigo-900 border-indigo-700 text-white cursor-pointer w-full mb-4 text-sm';
+            nightSpan.textContent = nightSpan.dataset[lang + 'On'];
+            nightIcon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+        } else {
+            btnNight.className = 'flex items-center gap-3 px-3 py-2 rounded-lg font-semibold shadow-sm border-2 bg-yellow-100 border-yellow-300 text-yellow-800 cursor-pointer w-full mb-4 text-sm';
+            nightSpan.textContent = nightSpan.dataset[lang + 'Off'];
+            nightIcon.innerHTML = '<circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>';
+        }
+
+        // Device button
+        const btnDevice = document.getElementById('btn-device');
+        const deviceSpan = btnDevice.querySelector('span');
+        const deviceIcon = document.getElementById('device-icon');
+        if (currentDevice === 'fan') {
+            btnDevice.className = 'flex items-center gap-3 px-3 py-2 rounded-lg font-semibold shadow-sm border-2 bg-blue-100 border-blue-300 text-blue-800 cursor-pointer w-full mb-4 text-sm';
+            deviceSpan.textContent = deviceSpan.dataset[lang + 'Fan'];
+            // Fan icon
+            deviceIcon.innerHTML = '<path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10 10-4.5 10-10S17.5 2 12 2z" fill="none"/><circle cx="12" cy="12" r="3"/><path d="M12 9V2M12 22v-7M15 12h7M2 12h7"/>';
+        } else {
+            btnDevice.className = 'flex items-center gap-3 px-3 py-2 rounded-lg font-semibold shadow-sm border-2 bg-emerald-100 border-emerald-300 text-emerald-800 cursor-pointer w-full mb-4 text-sm';
+            deviceSpan.textContent = deviceSpan.dataset[lang + 'Lamp'];
+            // Bulb icon
+            deviceIcon.innerHTML = '<circle cx="12" cy="12" r="3"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>';
+        }
+    }
+
+    // ========== ACTIONS ==========
+    function toggleClouds() {
+        isCloudy = !isCloudy;
+        updateSimulation();
+    }
+
+    function toggleNight() {
+        isNight = !isNight;
+        updateSimulation();
+    }
+
+    function toggleDevice() {
+        currentDevice = currentDevice === 'lamp' ? 'fan' : 'lamp';
+        updateSimulation();
+    }
+
+    // ========== LANGUAGE ==========
+    function toggleLanguage() {
+        currentLang = currentLang === 'fr' ? 'ar' : 'fr';
+        const html = document.documentElement;
+
+        if (currentLang === 'ar') {
+            html.setAttribute('dir', 'rtl');
+            html.setAttribute('lang', 'ar');
+            document.getElementById('lang-label').textContent = 'Français';
+        } else {
+            html.setAttribute('dir', 'ltr');
+            html.setAttribute('lang', 'fr');
+            document.getElementById('lang-label').textContent = 'العربية';
+        }
+
+        // Simple data-fr / data-ar texts
+        document.querySelectorAll('[data-fr]').forEach(el => {
+            if (el.dataset[currentLang]) el.textContent = el.dataset[currentLang];
+        });
+
+        updateButtons();
+    }
+
+    // ========== INIT ==========
+    updateSimulation();
+</script>
+</body>
+</html>

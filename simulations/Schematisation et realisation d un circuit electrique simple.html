@@ -1,0 +1,1215 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Physique : Du Réel au Schéma (Avancé)</title>
+
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background: #000;
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        #sim-wrapper {
+            width: 1024px;
+            height: 640px;
+            position: absolute;
+            transform-origin: top left;
+            overflow: hidden;
+            background: #fff;
+        }
+
+        /* HEADER */
+        .ui-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: #2c3e50;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            box-sizing: border-box;
+            z-index: 100;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        .ui-title {
+            font-weight: bold;
+            font-size: 20px;
+            color: #ecf0f1;
+        }
+
+        .ui-instr {
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            color: #f1c40f;
+            font-size: 18px;
+            margin-left: 20px;
+            font-weight: 500;
+        }
+
+        .btn {
+            background: #34495e;
+            color: white;
+            border: 1px solid #7f8c8d;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .btn:hover {
+            background: #4b6584;
+        }
+
+        .btn-action {
+            background: #27ae60;
+            border-color: #2ecc71;
+        }
+
+        .btn-action:hover {
+            background: #2ecc71;
+            transform: scale(1.05);
+        }
+
+        /* MAIN CANVASES */
+        #main-canvas,
+        #grid-canvas {
+            display: block;
+            position: absolute;
+            top: 60px;
+            left: 0;
+        }
+
+        #notebook-layer {
+            display: none;
+            z-index: 50;
+            background: #fff;
+            top: 60px;
+            height: 580px;
+            width: 100%;
+            position: absolute;
+        }
+
+        #notebook-layer.visible {
+            display: block;
+        }
+
+        /* TOOLBAR (Niveau 3) */
+        .drawing-tools {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 10px 20px;
+            border-radius: 50px;
+            box-shadow: 0 5px 20px rgba(0, 0, 0, 0.2);
+            display: flex;
+            gap: 20px;
+        }
+
+        .tool-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            border: 2px solid #bdc3c7;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .tool-icon:hover {
+            transform: translateY(-3px);
+        }
+
+        .tool-icon.active {
+            border-color: #e67e22;
+            background: #fff3e0;
+            box-shadow: 0 0 10px rgba(230, 126, 34, 0.3);
+        }
+
+        .tool-label {
+            position: absolute;
+            bottom: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 10px;
+            color: #7f8c8d;
+            white-space: nowrap;
+            font-weight: bold;
+        }
+
+        /* TOAST */
+        .toast {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #27ae60;
+            color: white;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 20px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+            opacity: 0;
+            transition: all 0.5s;
+            pointer-events: none;
+            z-index: 200;
+            transform: translateX(-50%) translateY(-20px);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* SCHEMA CARD (Niveau 2) */
+        .schema-card {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 250px;
+            height: 180px;
+            background: white;
+            border: 2px solid #2c3e50;
+            border-radius: 8px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            z-index: 10;
+            display: none;
+            flex-direction: column;
+        }
+
+        .schema-card.visible {
+            display: flex;
+        }
+
+        .schema-header {
+            background: #2c3e50;
+            color: white;
+            padding: 5px 10px;
+            font-size: 14px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .schema-body {
+            flex: 1;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .tip-box {
+            position: absolute;
+            top: 80px;
+            left: 20px;
+            width: 200px;
+            background: rgba(255, 255, 255, 0.9);
+            border-left: 4px solid #f1c40f;
+            padding: 10px;
+            font-size: 14px;
+            color: #555;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            pointer-events: none;
+            z-index: 40;
+            display: none;
+        }
+
+        .tip-box.visible {
+            display: block;
+        }
+
+        /* RTL */
+        body.rtl {
+            direction: rtl;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+        }
+
+        body.rtl .ui-instr {
+            margin-left: 0;
+            margin-right: 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="sim-wrapper">
+        <!-- Header -->
+        <div class="ui-header">
+            <div style="display:flex; align-items:center;">
+                <span class="ui-title">Cours 3</span>
+                <span id="instruction" class="ui-instr">...</span>
+            </div>
+            <div style="display:flex; gap:10px;">
+                <button class="btn" onclick="app.toggleLang()">FR / AR</button>
+                <button class="btn" onclick="app.resetLevel()">Réinitialiser</button>
+                <button class="btn btn-action" id="btn-next" onclick="app.nextLevel()" style="display:none;">Suivant
+                    ➔</button>
+            </div>
+        </div>
+
+        <!-- Canvas Principal (Niv 1 & 2) -->
+        <canvas id="main-canvas" width="1024" height="580"></canvas>
+
+        <!-- Schema Overlay (Niv 2) -->
+        <div id="schema-card" class="schema-card">
+            <div class="schema-header">OBJECTIF : Réalisez ce montage</div>
+            <div class="schema-body">
+                <canvas id="target-schema-canvas" width="240" height="140"></canvas>
+            </div>
+        </div>
+
+        <!-- Aide (Niv 3) -->
+        <div id="tip-box" class="tip-box">
+            <b>Astuce :</b><br>Cliquez sur un symbole placé sur la grille pour le faire pivoter.
+        </div>
+
+        <!-- Mode Cahier (Niv 3) -->
+        <div id="notebook-layer">
+            <canvas id="grid-canvas" width="1024" height="580"></canvas>
+            <div class="drawing-tools">
+                <div class="tool-icon active" id="tool-wire" onclick="app.setTool('wire')">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#2c3e50" stroke-width="3">
+                        <path d="M2 12h20" />
+                    </svg>
+                    <span class="tool-label">Fil</span>
+                </div>
+                <div class="tool-icon" onclick="app.setTool('bat')">
+                    <canvas width="30" height="30" id="icon-bat"></canvas>
+                    <span class="tool-label">Pile</span>
+                </div>
+                <div class="tool-icon" onclick="app.setTool('lamp')">
+                    <canvas width="30" height="30" id="icon-lamp"></canvas>
+                    <span class="tool-label">Lampe</span>
+                </div>
+                <div class="tool-icon" onclick="app.setTool('sw_open')">
+                    <canvas width="30" height="30" id="icon-sw"></canvas>
+                    <span class="tool-label">Inter.</span>
+                </div>
+                <div class="tool-icon" onclick="app.setTool('motor')">
+                    <canvas width="30" height="30" id="icon-mot"></canvas>
+                    <span class="tool-label">Moteur</span>
+                </div>
+                <div class="tool-icon" onclick="app.checkSchema()" style="border-color:#27ae60; background:#f0fcf4;">
+                    <span style="color:#27ae60; font-weight:bold; font-size:14px;">OK</span>
+                    <span class="tool-label" style="color:#27ae60">Valider</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="toast" class="toast">Bravo !</div>
+    </div>
+
+    <script>
+        // --- POLYFILL ROUND RECT ---
+        if (CanvasRenderingContext2D.prototype.roundRect === undefined) {
+            CanvasRenderingContext2D.prototype.roundRect = function (x, y, w, h, r) {
+                if (w < 2 * r) r = w / 2;
+                if (h < 2 * r) r = h / 2;
+                this.beginPath();
+                this.moveTo(x + r, y);
+                this.arcTo(x + w, y, x + w, y + h, r);
+                this.arcTo(x + w, y + h, x, y + h, r);
+                this.arcTo(x, y + h, x, y, r);
+                this.arcTo(x, y, x + w, y, r);
+                this.closePath();
+                return this;
+            };
+        }
+
+        /* --- 1. MOTEUR GRAPHIQUE (Dessin Réaliste & Symboles) --- */
+
+        const Draw = {
+            // Composants Réalistes (Style Photo/Vectoriel poussé)
+            real: {
+                battery: (ctx, x, y, w, h) => {
+                    ctx.save(); ctx.translate(x, y);
+                    // Ombre portée douce
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 5;
+
+                    // Corps Pile (Cylindre)
+                    const g = ctx.createLinearGradient(0, 0, w, 0);
+                    g.addColorStop(0, '#34495e'); g.addColorStop(0.2, '#576c7c'); g.addColorStop(0.5, '#34495e'); g.addColorStop(1, '#2c3e50');
+                    ctx.fillStyle = g;
+                    ctx.beginPath(); ctx.roundRect(0, 0, w, h, 5); ctx.fill();
+                    ctx.shadowColor = 'transparent'; // Stop shadow
+
+                    // Etiquette Jaune
+                    const gLabel = ctx.createLinearGradient(0, 0, w, 0);
+                    gLabel.addColorStop(0, '#f1c40f'); gLabel.addColorStop(0.5, '#f39c12'); gLabel.addColorStop(1, '#f1c40f');
+                    ctx.fillStyle = gLabel; ctx.fillRect(10, 30, w - 20, h - 50);
+
+                    // Texte
+                    ctx.fillStyle = '#c0392b'; ctx.font = '900 16px Roboto'; ctx.textAlign = 'center'; ctx.fillText('4.5V', w / 2, 65);
+
+                    // Languettes (Métal)
+                    const gMetal = ctx.createLinearGradient(0, 0, 0, h);
+                    gMetal.addColorStop(0, '#ecf0f1'); gMetal.addColorStop(1, '#bdc3c7');
+
+                    // Moins (Court)
+                    ctx.fillStyle = gMetal; ctx.fillRect(15, -12, 12, 15);
+                    // Plus (Long)
+                    ctx.fillStyle = gMetal; ctx.fillRect(w - 27, -18, 12, 21);
+
+                    // Symboles gravés
+                    ctx.fillStyle = '#fff'; ctx.font = 'bold 20px sans-serif';
+                    ctx.fillText('-', 21, 20); ctx.fillText('+', w - 21, 20);
+                    ctx.restore();
+                },
+                lamp: (ctx, x, y, w, h, on) => {
+                    ctx.save(); ctx.translate(x, y);
+
+                    // Douille (Métal strié)
+                    const gSocket = ctx.createLinearGradient(0, 0, w, 0);
+                    gSocket.addColorStop(0, '#7f8c8d'); gSocket.addColorStop(0.5, '#bdc3c7'); gSocket.addColorStop(1, '#7f8c8d');
+                    ctx.fillStyle = gSocket; ctx.fillRect(w / 2 - 15, h - 25, 30, 25);
+                    // Stries
+                    ctx.strokeStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath();
+                    ctx.moveTo(w / 2 - 15, h - 20); ctx.lineTo(w / 2 + 15, h - 20);
+                    ctx.moveTo(w / 2 - 15, h - 10); ctx.lineTo(w / 2 + 15, h - 10); ctx.stroke();
+
+                    // Verre (Ampoule)
+                    ctx.beginPath(); ctx.arc(w / 2, h / 2 - 10, 25, 0, Math.PI * 2);
+                    if (on) {
+                        // Glow réaliste
+                        const gLight = ctx.createRadialGradient(w / 2, h / 2 - 10, 5, w / 2, h / 2 - 10, 30);
+                        gLight.addColorStop(0, '#fff'); gLight.addColorStop(0.5, '#f1c40f'); gLight.addColorStop(1, 'rgba(241, 196, 15, 0)');
+                        ctx.fillStyle = gLight;
+                        ctx.shadowColor = '#f39c12'; ctx.shadowBlur = 50;
+                        ctx.fill(); ctx.shadowBlur = 0;
+                        ctx.strokeStyle = 'rgba(255,255,255,0.8)'; ctx.lineWidth = 2; ctx.stroke();
+                    } else {
+                        ctx.fillStyle = 'rgba(236, 240, 241, 0.4)'; ctx.strokeStyle = '#bdc3c7'; ctx.fill(); ctx.stroke();
+                        // Filament éteint
+                        ctx.beginPath(); ctx.moveTo(w / 2 - 8, h - 25); ctx.lineTo(w / 2 - 8, h / 2 - 10); ctx.lineTo(w / 2 + 8, h / 2 - 10); ctx.lineTo(w / 2 + 8, h - 25);
+                        ctx.strokeStyle = '#7f8c8d'; ctx.lineWidth = 1; ctx.stroke();
+                    }
+
+                    // Bornes de connexion (Vis)
+                    ctx.fillStyle = '#e67e22';
+                    ctx.beginPath(); ctx.arc(w / 2 - 15, h - 12, 5, 0, Math.PI * 2); ctx.fill(); // Coté
+                    ctx.beginPath(); ctx.arc(w / 2, h + 5, 5, 0, Math.PI * 2); ctx.fill(); // Bas
+                    ctx.restore();
+                },
+                switchComp: (ctx, x, y, w, h, closed) => {
+                    ctx.save(); ctx.translate(x, y);
+                    // Socle
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 5;
+                    ctx.fillStyle = '#34495e'; ctx.beginPath(); ctx.roundRect(0, 15, w, 20, 5); ctx.fill();
+                    ctx.shadowColor = 'transparent';
+
+                    // Bornes
+                    ctx.fillStyle = '#f39c12';
+                    ctx.beginPath(); ctx.arc(15, 25, 7, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(w - 15, 25, 7, 0, Math.PI * 2); ctx.fill();
+
+                    // Levier (Lame de cuivre)
+                    ctx.save(); ctx.translate(15, 25);
+                    ctx.rotate(closed ? 0 : -0.6); // Angle plus prononcé
+
+                    const gBlade = ctx.createLinearGradient(0, 0, 0, 10);
+                    gBlade.addColorStop(0, '#bdc3c7'); gBlade.addColorStop(1, '#95a5a6');
+                    ctx.fillStyle = gBlade;
+                    ctx.shadowColor = 'rgba(0,0,0,0.2)'; ctx.shadowBlur = 2;
+                    ctx.fillRect(0, -5, w - 30, 10);
+
+                    // Poignée isolante
+                    ctx.fillStyle = '#c0392b'; ctx.beginPath(); ctx.arc(w - 35, 0, 9, 0, Math.PI * 2); ctx.fill();
+                    ctx.restore();
+                    ctx.restore();
+                },
+                motor: (ctx, x, y, w, h) => {
+                    ctx.save(); ctx.translate(x, y);
+                    // Corps Moteur
+                    ctx.shadowColor = 'rgba(0,0,0,0.3)'; ctx.shadowBlur = 5;
+                    const g = ctx.createLinearGradient(0, 0, 0, h);
+                    g.addColorStop(0, '#bdc3c7'); g.addColorStop(1, '#7f8c8d');
+                    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(w / 2, h / 2, 35, 0, Math.PI * 2); ctx.fill();
+                    ctx.shadowColor = 'transparent';
+
+                    // Axe
+                    ctx.fillStyle = '#2c3e50'; ctx.beginPath(); ctx.arc(w / 2, h / 2, 5, 0, Math.PI * 2); ctx.fill();
+
+                    // Bornes
+                    ctx.fillStyle = '#e67e22';
+                    ctx.beginPath(); ctx.arc(w / 2 - 25, h - 10, 5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(w / 2 + 25, h - 10, 5, 0, Math.PI * 2); ctx.fill();
+                    ctx.restore();
+                },
+                wire: (ctx, p1, p2) => {
+                    ctx.beginPath(); ctx.moveTo(p1.x, p1.y);
+                    const cx = (p1.x + p2.x) / 2; const cy = (p1.y + p2.y) / 2 + 60; // Plus de "mou" réaliste
+                    ctx.quadraticCurveTo(cx, cy, p2.x, p2.y);
+
+                    // Gaine rouge
+                    ctx.strokeStyle = '#c0392b'; ctx.lineWidth = 6; ctx.lineCap = 'round'; ctx.stroke();
+                    // Reflet
+                    ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.lineWidth = 2; ctx.stroke();
+
+                    // Extrémités dénudées (Cuivre)
+                    ctx.fillStyle = '#d35400';
+                    ctx.beginPath(); ctx.arc(p1.x, p1.y, 4, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(p2.x, p2.y, 4, 0, Math.PI * 2); ctx.fill();
+                }
+            },
+
+            // Symboles Normalisés
+            symbol: {
+                // rotation en radians (0 = horizontal, -PI/2 = vertical)
+                draw: (ctx, type, x, y, scale = 1, rotation = 0) => {
+                    ctx.save();
+                    ctx.translate(x, y);
+                    ctx.rotate(rotation); // Rotation appliquée ici
+                    ctx.scale(scale, scale);
+
+                    ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.lineCap = 'round';
+
+                    // Effacer la zone derrière le symbole pour ne pas voir la grille
+                    if (type !== 'wire') {
+                        ctx.fillStyle = '#fff';
+                        ctx.clearRect(-20, -20, 40, 40);
+                        if (type.startsWith('sw_open')) ctx.clearRect(-20, -30, 40, 60); // Plus large pour sw_open
+                    }
+
+                    if (type === 'bat') {
+                        // Pile: | | (Perpendiculaire au fil)
+                        ctx.beginPath();
+                        ctx.moveTo(-25, 0); ctx.lineTo(-5, 0);
+                        ctx.moveTo(5, 0); ctx.lineTo(25, 0);
+                        ctx.stroke();
+
+                        ctx.beginPath();
+                        // Pole - (Court épais)
+                        ctx.moveTo(-5, -10); ctx.lineTo(-5, 10); ctx.lineWidth = 4; ctx.stroke(); ctx.lineWidth = 2;
+                        // Pole + (Long fin)
+                        ctx.moveTo(5, -18); ctx.lineTo(5, 18); ctx.stroke();
+
+                        ctx.font = '10px sans-serif'; ctx.fillStyle = '#000'; ctx.fillText('+', 8, -20); ctx.fillText('-', -15, -12);
+                    }
+                    else if (type === 'lamp') {
+                        ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(-10, -10); ctx.lineTo(10, 10); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(10, -10); ctx.lineTo(-10, 10); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(-25, 0); ctx.lineTo(-14, 0); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(25, 0); ctx.stroke();
+                    }
+                    else if (type.startsWith('sw')) {
+                        const open = type.includes('open');
+                        ctx.beginPath(); ctx.arc(-12, 0, 3, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.arc(12, 0, 3, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(-25, 0); ctx.lineTo(-15, 0); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(15, 0); ctx.lineTo(25, 0); ctx.stroke();
+                        ctx.beginPath();
+                        if (open) {
+                            ctx.moveTo(-12, 0); ctx.lineTo(10, -12); // Levier levé
+                        } else {
+                            ctx.moveTo(-9, 0); ctx.lineTo(9, 0); // Levier plat
+                        }
+                        ctx.stroke();
+                    }
+                    else if (type === 'motor') {
+                        ctx.beginPath(); ctx.arc(0, 0, 14, 0, Math.PI * 2); ctx.fillStyle = '#fff'; ctx.fill(); ctx.stroke();
+                        ctx.font = 'bold 16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillStyle = '#000';
+                        ctx.fillText('M', 0, 1);
+                        ctx.beginPath(); ctx.moveTo(-25, 0); ctx.lineTo(-14, 0); ctx.stroke();
+                        ctx.beginPath(); ctx.moveTo(14, 0); ctx.lineTo(25, 0); ctx.stroke();
+                    }
+                    ctx.restore();
+                }
+            }
+        };
+
+        /* --- 2. LOGIQUE NIVEAU 2 : SIMULATION --- */
+
+        class CircuitEntity {
+            constructor(type, x, y) {
+                this.type = type;
+                this.x = x; this.y = y;
+                this.w = type === 'bat' ? 80 : (type === 'lamp' ? 60 : 100);
+                this.h = type === 'bat' ? 80 : (type === 'lamp' ? 80 : 50);
+                this.terminals = [];
+                this.isOn = false;
+                this.isClosed = false;
+
+                if (type === 'bat') this.terminals = [{ id: 'b-', x: 20, y: -10 }, { id: 'b+', x: 60, y: -10 }];
+                else if (type === 'lamp') this.terminals = [{ id: 'l1', x: 15, y: 68 }, { id: 'l2', x: 30, y: 85 }];
+                else if (type === 'sw') this.terminals = [{ id: 's1', x: 15, y: 25 }, { id: 's2', x: 85, y: 25 }];
+            }
+
+            getAbsTerminals() {
+                return this.terminals.map(t => ({ id: t.id, x: this.x + t.x, y: this.y + t.y, parent: this }));
+            }
+
+            draw(ctx) {
+                if (this.type === 'bat') Draw.real.battery(ctx, this.x, this.y, this.w, this.h);
+                else if (this.type === 'lamp') Draw.real.lamp(ctx, this.x, this.y, this.w, this.h, this.isOn);
+                else if (this.type === 'sw') Draw.real.switchComp(ctx, this.x, this.y, this.w, this.h, this.isClosed);
+            }
+
+            contains(mx, my) { return mx >= this.x && mx <= this.x + this.w && my >= this.y && my <= this.y + this.h; }
+        }
+
+        class Wire {
+            constructor(t1, t2) {
+                this.p1 = { ...t1 }; this.p2 = { ...t2 };
+                this.conn1 = null; this.conn2 = null;
+            }
+        }
+
+        /* --- 3. APPLICATION PRINCIPALE --- */
+
+        class Application {
+            constructor() {
+                this.level = 1;
+                this.lang = 'fr';
+                this.canvas = document.getElementById('main-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.gridCanvas = document.getElementById('grid-canvas');
+                this.gridCtx = this.gridCanvas.getContext('2d');
+
+                // State global
+                this.items = [];
+                this.circuitItems = [];
+                this.circuitWires = [];
+                this.dragData = null;
+
+                // Niv 3 Data
+                this.schemaElements = [];
+                this.schemaWires = [];
+                this.currentTool = 'wire';
+
+                this.initLevel();
+                this.setupEvents();
+                this.renderIcons();
+                this.loop();
+            }
+
+            nextLevel() {
+                this.level++;
+                if (this.level > 3) this.level = 1;
+                this.initLevel();
+            }
+            resetLevel() { this.initLevel(); }
+
+            toggleLang() {
+                this.lang = this.lang === 'fr' ? 'ar' : 'fr';
+                document.body.classList.toggle('rtl', this.lang === 'ar');
+                this.updateInstructions();
+            }
+
+            initLevel() {
+                this.items = []; this.circuitItems = []; this.circuitWires = [];
+                document.getElementById('btn-next').style.display = 'none';
+                document.getElementById('schema-card').classList.remove('visible');
+                document.getElementById('notebook-layer').classList.remove('visible');
+                document.getElementById('tip-box').classList.remove('visible');
+                document.getElementById('toast').classList.remove('show');
+
+                if (this.level === 1) {
+                    const types = ['bat', 'lamp', 'sw_open', 'sw_closed', 'motor'];
+                    types.forEach((t, i) => this.items.push({ type: t, mode: 'real', x: 200, y: 80 + i * 100, connected: false }));
+                    const shuffled = [...types].sort(() => Math.random() - 0.5);
+                    shuffled.forEach((t, i) => this.items.push({ type: t, mode: 'symbol', x: 800, y: 80 + i * 100, target: false }));
+                    this.lines = [];
+                }
+                else if (this.level === 2) {
+                    document.getElementById('schema-card').classList.add('visible');
+                    this.drawTargetSchema();
+                    this.circuitItems.push(new CircuitEntity('bat', 100, 400));
+                    this.circuitItems.push(new CircuitEntity('lamp', 300, 400));
+                    this.circuitItems.push(new CircuitEntity('sw', 500, 420));
+                    this.circuitWires.push(new Wire({ x: 200, y: 200 }, { x: 400, y: 200 }));
+                    this.circuitWires.push(new Wire({ x: 500, y: 200 }, { x: 700, y: 200 }));
+                    this.circuitWires.push(new Wire({ x: 300, y: 300 }, { x: 500, y: 300 }));
+                }
+                else if (this.level === 3) {
+                    document.getElementById('notebook-layer').classList.add('visible');
+                    document.getElementById('tip-box').classList.add('visible');
+                    this.schemaElements = []; this.schemaWires = [];
+                    this.drawGrid();
+                }
+                this.updateInstructions();
+            }
+
+            updateInstructions() {
+                const TEXTS = {
+                    fr: [
+                        "Mission 1 : Reliez les objets à leurs symboles.",
+                        "Mission 2 : Construisez le circuit et vérifiez s'il fonctionne.",
+                        "Mission 3 : Dessinez le schéma sur le cahier."
+                    ],
+                    ar: [
+                        "المهمة 1: صل الأشياء برموزها.",
+                        "المهمة 2: أنشئ الدارة وتحقق من عملها.",
+                        "المهمة 3: ارسم التبيانة على الدفتر."
+                    ]
+                };
+                document.getElementById('instruction').innerText = TEXTS[this.lang][this.level - 1];
+            }
+
+            // --- LOGIQUE NIVEAU 2 ---
+            updateCircuit() {
+                const lamp = this.circuitItems.find(i => i.type === 'lamp');
+                if (lamp) lamp.isOn = false;
+
+                const sw = this.circuitItems.find(i => i.type === 'sw');
+                let connectedCount = 0;
+                this.circuitWires.forEach(w => {
+                    if (w.conn1 && w.conn2) connectedCount++;
+                });
+
+                if (connectedCount === 3) {
+                    if (sw && sw.isClosed) {
+                        if (lamp) lamp.isOn = true;
+                        if (document.getElementById('btn-next').style.display === 'none') {
+                            this.showSuccess("Circuit Fonctionnel !");
+                        }
+                    }
+                }
+            }
+
+            // --- LOGIQUE NIVEAU 1 ---
+            checkMatching() {
+                // Maintenant on a 5 paires
+                if (this.lines.length === 5) {
+                    const correct = this.lines.every(l => {
+                        const t1 = l.from.type; const t2 = l.to.type;
+                        if (t1 === 'bat' && t2 === 'bat') return true;
+                        if (t1 === 'lamp' && t2 === 'lamp') return true;
+                        if (t1 === 'motor' && t2 === 'motor') return true;
+                        if (t1 === 'sw_open' && t2 === 'sw_open') return true;
+                        if (t1 === 'sw_closed' && t2 === 'sw_closed') return true;
+                        return false;
+                    });
+                    if (correct) this.showSuccess("Parfait !");
+                }
+            }
+
+            // --- RENDU LOOP ---
+            loop() {
+                const ctx = this.ctx;
+                ctx.clearRect(0, 0, 1024, 640);
+
+                if (this.level === 1) {
+                    this.items.forEach(i => {
+                        if (i.mode === 'real') {
+                            if (i.type === 'bat') Draw.real.battery(ctx, i.x - 40, i.y - 40, 80, 80);
+                            else if (i.type === 'lamp') Draw.real.lamp(ctx, i.x - 40, i.y - 40, 80, 80);
+                            else if (i.type === 'sw_open') Draw.real.switchComp(ctx, i.x - 40, i.y - 20, 80, 40, false);
+                            else if (i.type === 'sw_closed') Draw.real.switchComp(ctx, i.x - 40, i.y - 20, 80, 40, true);
+                            else if (i.type === 'motor') Draw.real.motor(ctx, i.x - 40, i.y - 40, 80, 80);
+
+                            ctx.beginPath(); ctx.arc(i.x + 50, i.y, 5, 0, Math.PI * 2); ctx.fillStyle = '#3498db'; ctx.fill();
+                        } else {
+                            ctx.fillStyle = '#fff'; ctx.strokeStyle = '#bdc3c7'; ctx.lineWidth = 2;
+                            ctx.fillRect(i.x - 40, i.y - 40, 80, 80); ctx.strokeRect(i.x - 40, i.y - 40, 80, 80);
+                            Draw.symbol.draw(ctx, i.type, i.x, i.y, 1.5);
+                            ctx.beginPath(); ctx.arc(i.x - 50, i.y, 5, 0, Math.PI * 2); ctx.fillStyle = '#3498db'; ctx.fill();
+                        }
+                    });
+                    this.lines.forEach(l => {
+                        ctx.beginPath(); ctx.moveTo(l.from.x + 50, l.from.y); ctx.lineTo(l.to.x - 50, l.to.y);
+                        ctx.strokeStyle = l.correct ? '#2ecc71' : '#e74c3c'; ctx.lineWidth = 4; ctx.stroke();
+                    });
+                    if (this.dragData && this.dragData.mode === 'line') {
+                        ctx.beginPath(); ctx.moveTo(this.dragData.start.x + 50, this.dragData.start.y);
+                        ctx.lineTo(this.dragData.curr.x, this.dragData.curr.y);
+                        ctx.strokeStyle = '#3498db'; ctx.lineWidth = 2; ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]);
+                    }
+                }
+                else if (this.level === 2) {
+                    this.circuitWires.forEach(w => {
+                        Draw.real.wire(ctx, w.p1, w.p2);
+                        if (w.conn1) { ctx.beginPath(); ctx.arc(w.p1.x, w.p1.y, 8, 0, Math.PI * 2); ctx.fillStyle = '#2ecc71'; ctx.fill(); }
+                        if (w.conn2) { ctx.beginPath(); ctx.arc(w.p2.x, w.p2.y, 8, 0, Math.PI * 2); ctx.fillStyle = '#2ecc71'; ctx.fill(); }
+                    });
+                    this.circuitItems.forEach(c => c.draw(ctx));
+                }
+                requestAnimationFrame(() => this.loop());
+            }
+
+            // --- EVENTS ---
+            setupEvents() {
+                const getMousePos = (e, c) => {
+                    const r = c.getBoundingClientRect();
+                    return { x: (e.clientX - r.left) * (c.width / r.width), y: (e.clientY - r.top) * (c.height / r.height) };
+                };
+                const getTouchPos = (e, c) => {
+                    const t = e.touches[0] || e.changedTouches[0];
+                    const r = c.getBoundingClientRect();
+                    return { x: (t.clientX - r.left) * (c.width / r.width), y: (t.clientY - r.top) * (c.height / r.height) };
+                };
+                const cvs = this.canvas;
+                const gCvs = this.gridCanvas;
+
+                // ======= Unified handlers =======
+                const onDown = (p) => {
+                    if (this.level === 1) {
+                        const hit = this.items.find(i => i.mode === 'real' && Math.hypot(p.x - (i.x + 50), p.y - i.y) < 20);
+                        if (hit && !hit.connected) this.dragData = { mode: 'line', start: hit, curr: p };
+                    }
+                    else if (this.level === 2) {
+                        const sw = this.circuitItems.find(i => i.type === 'sw');
+                        if (sw && sw.contains(p.x, p.y)) { sw.isClosed = !sw.isClosed; this.updateCircuit(); return; }
+
+                        for (let w of this.circuitWires) {
+                            if (Math.hypot(p.x - w.p1.x, p.y - w.p1.y) < 20) { this.dragData = { mode: 'wire', obj: w, point: 'p1' }; w.conn1 = null; this.updateCircuit(); return; }
+                            if (Math.hypot(p.x - w.p2.x, p.y - w.p2.y) < 20) { this.dragData = { mode: 'wire', obj: w, point: 'p2' }; w.conn2 = null; this.updateCircuit(); return; }
+                        }
+
+                        for (let c of this.circuitItems) {
+                            if (c.contains(p.x, p.y)) {
+                                this.dragData = { mode: 'comp', obj: c, offX: p.x - c.x, offY: p.y - c.y };
+                                return;
+                            }
+                        }
+
+                        for (let w of this.circuitWires) {
+                            const cx = (w.p1.x + w.p2.x) / 2; const cy = (w.p1.y + w.p2.y) / 2 + 20;
+                            if (Math.hypot(p.x - cx, p.y - cy) < 30) { this.dragData = { mode: 'wireMove', obj: w, offX: p.x - w.p1.x, offY: p.y - w.p1.y }; return; }
+                        }
+                    }
+                };
+
+                const onMove = (p) => {
+                    if (!this.dragData) return;
+                    if (this.dragData.mode === 'line') this.dragData.curr = p;
+                    else if (this.dragData.mode === 'wire') {
+                        const w = this.dragData.obj;
+                        if (this.dragData.point === 'p1') { w.p1.x = p.x; w.p1.y = p.y; } else { w.p2.x = p.x; w.p2.y = p.y; }
+                    }
+                    else if (this.dragData.mode === 'comp') {
+                        const c = this.dragData.obj;
+                        const dx = p.x - this.dragData.offX - c.x;
+                        const dy = p.y - this.dragData.offY - c.y;
+                        c.x += dx; c.y += dy;
+
+                        this.circuitWires.forEach(w => {
+                            const terms = c.getAbsTerminals();
+                            const t1 = terms.find(t => (c.type + '_' + t.id) === w.conn1);
+                            if (t1) { w.p1.x = t1.x; w.p1.y = t1.y; }
+                            const t2 = terms.find(t => (c.type + '_' + t.id) === w.conn2);
+                            if (t2) { w.p2.x = t2.x; w.p2.y = t2.y; }
+                        });
+                    }
+                    else if (this.dragData.mode === 'wireMove') {
+                        const w = this.dragData.obj;
+                        const dx = w.p2.x - w.p1.x; const dy = w.p2.y - w.p1.y;
+                        w.p1.x = p.x - this.dragData.offX; w.p1.y = p.y - this.dragData.offY;
+                        w.p2.x = w.p1.x + dx; w.p2.y = w.p1.y + dy;
+                    }
+                };
+
+                const onUp = (p) => {
+                    if (!this.dragData) return;
+                    if (this.level === 1 && this.dragData.mode === 'line') {
+                        const hit = this.items.find(i => i.mode === 'symbol' && Math.hypot(p.x - (i.x - 50), p.y - i.y) < 30);
+                        if (hit && !hit.target) {
+                            let match = false;
+                            if (this.dragData.start.type === hit.type) match = true;
+                            if (match) {
+                                this.lines.push({ from: this.dragData.start, to: hit, correct: true });
+                                this.dragData.start.connected = true; hit.target = true; this.checkMatching();
+                            }
+                        }
+                    }
+                    else if (this.level === 2 && this.dragData.mode === 'wire') {
+                        let bestD = 30; let snapT = null;
+                        this.circuitItems.forEach(c => {
+                            c.getAbsTerminals().forEach(t => {
+                                const d = Math.hypot(p.x - t.x, p.y - t.y);
+                                if (d < bestD) { bestD = d; snapT = t; }
+                            });
+                        });
+                        if (snapT) {
+                            const uid = snapT.parent.type + '_' + snapT.id;
+                            const w = this.dragData.obj;
+                            if (this.dragData.point === 'p1') { w.p1.x = snapT.x; w.p1.y = snapT.y; w.conn1 = uid; }
+                            else { w.p2.x = snapT.x; w.p2.y = snapT.y; w.conn2 = uid; }
+                            this.updateCircuit();
+                        }
+                    }
+                    this.dragData = null;
+                };
+
+                // ======= Grid (Level 3) handlers =======
+                const onGridDown = (p) => {
+                    const gx = Math.round(p.x / 40); const gy = Math.round(p.y / 40);
+                    const clickedElIndex = this.schemaElements.findIndex(el => el.x === gx && el.y === gy);
+                    if (clickedElIndex !== -1 && this.currentTool !== 'wire') {
+                        this.schemaElements[clickedElIndex].rotation = (this.schemaElements[clickedElIndex].rotation || 0) + Math.PI / 2;
+                        this.drawGrid();
+                        return;
+                    }
+                    if (this.currentTool === 'wire') {
+                        this.dragSchema = { start: { x: gx, y: gy }, curr: p };
+                    } else {
+                        this.schemaElements.push({ type: this.currentTool, x: gx, y: gy, rotation: 0 });
+                        this.drawGrid();
+                    }
+                };
+
+                const onGridMove = (p) => {
+                    if (this.level === 3 && this.dragSchema) {
+                        this.dragSchema.curr = p;
+                        this.drawGrid();
+                    }
+                };
+
+                const onGridUp = (p) => {
+                    if (this.level === 3 && this.dragSchema) {
+                        const gx = Math.round(p.x / 40); const gy = Math.round(p.y / 40);
+                        const dx = Math.abs(gx - this.dragSchema.start.x);
+                        const dy = Math.abs(gy - this.dragSchema.start.y);
+                        if (dx > dy) this.schemaWires.push({ x1: this.dragSchema.start.x, y1: this.dragSchema.start.y, x2: gx, y2: this.dragSchema.start.y });
+                        else this.schemaWires.push({ x1: this.dragSchema.start.x, y1: this.dragSchema.start.y, x2: this.dragSchema.start.x, y2: gy });
+                        this.dragSchema = null;
+                        this.drawGrid();
+                    }
+                };
+
+                // ======= MOUSE events =======
+                cvs.addEventListener('mousedown', e => onDown(getMousePos(e, cvs)));
+                window.addEventListener('mousemove', e => { onMove(getMousePos(e, cvs)); onGridMove(getMousePos(e, gCvs)); });
+                window.addEventListener('mouseup', e => { onUp(getMousePos(e, cvs)); onGridUp(getMousePos(e, gCvs)); });
+                gCvs.addEventListener('mousedown', e => onGridDown(getMousePos(e, gCvs)));
+
+                // ======= TOUCH events (single-finger only) =======
+                cvs.addEventListener('touchstart', e => {
+                    if (e.touches.length === 1) { e.preventDefault(); onDown(getTouchPos(e, cvs)); }
+                }, { passive: false });
+                window.addEventListener('touchmove', e => {
+                    if (this.dragData && e.touches.length === 1) { e.preventDefault(); onMove(getTouchPos(e, cvs)); }
+                    if (this.dragSchema && e.touches.length === 1) { e.preventDefault(); onGridMove(getTouchPos(e, gCvs)); }
+                }, { passive: false });
+                window.addEventListener('touchend', e => {
+                    if (this.dragData) { onUp(getTouchPos(e, cvs)); }
+                    if (this.dragSchema) { onGridUp(getTouchPos(e, gCvs)); }
+                });
+                gCvs.addEventListener('touchstart', e => {
+                    if (e.touches.length === 1) { e.preventDefault(); onGridDown(getTouchPos(e, gCvs)); }
+                }, { passive: false });
+            }
+
+            // --- UTILS NIV 2 ---
+            drawTargetSchema() {
+                const cvs = document.getElementById('target-schema-canvas');
+                const ctx = cvs.getContext('2d');
+                ctx.clearRect(0, 0, 250, 150);
+                ctx.save(); ctx.translate(120, 70); ctx.scale(0.8, 0.8);
+                ctx.beginPath(); ctx.rect(-80, -50, 160, 100); ctx.strokeStyle = '#000'; ctx.lineWidth = 2; ctx.stroke();
+                Draw.symbol.draw(ctx, 'bat', -80, 0, 1, -Math.PI / 2);
+                Draw.symbol.draw(ctx, 'lamp', 80, 0, 1, Math.PI / 2);
+                Draw.symbol.draw(ctx, 'sw_open', 0, -50);
+                ctx.restore();
+            }
+
+            // --- UTILS NIV 3 ---
+            setTool(t) {
+                this.currentTool = t;
+                document.querySelectorAll('.tool-icon').forEach(el => el.classList.remove('active'));
+                const els = document.querySelectorAll('.tool-icon');
+                for (let el of els) { if (el.getAttribute('onclick').includes(t)) el.classList.add('active'); }
+            }
+
+            drawGrid() {
+                const ctx = this.gridCtx;
+                ctx.clearRect(0, 0, 1024, 580);
+
+                ctx.strokeStyle = '#e0e0e0'; ctx.lineWidth = 1;
+                ctx.beginPath();
+                for (let x = 0; x <= 1024; x += 40) { ctx.moveTo(x, 0); ctx.lineTo(x, 580); }
+                for (let y = 0; y <= 580; y += 40) { ctx.moveTo(0, y); ctx.lineTo(1024, y); }
+                ctx.stroke();
+
+                ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+                this.schemaWires.forEach(w => {
+                    ctx.beginPath(); ctx.moveTo(w.x1 * 40, w.y1 * 40); ctx.lineTo(w.x2 * 40, w.y2 * 40); ctx.stroke();
+                });
+
+                if (this.dragSchema) {
+                    const sx = this.dragSchema.start.x * 40; const sy = this.dragSchema.start.y * 40;
+                    const ex = this.dragSchema.curr.x; const ey = this.dragSchema.curr.y;
+                    ctx.strokeStyle = 'rgba(0,0,0,0.5)'; ctx.setLineDash([5, 5]);
+                    ctx.beginPath(); ctx.moveTo(sx, sy);
+                    if (Math.abs(ex - sx) > Math.abs(ey - sy)) ctx.lineTo(ex, sy); else ctx.lineTo(sx, ey);
+                    ctx.stroke(); ctx.setLineDash([]);
+                }
+
+                this.schemaElements.forEach(el => {
+                    Draw.symbol.draw(ctx, el.type, el.x * 40, el.y * 40, 1.0, el.rotation || 0);
+                });
+            }
+
+            analyzeCircuit() {
+                let segments = [];
+                this.schemaWires.forEach(w => {
+                    let x1 = w.x1, y1 = w.y1, x2 = w.x2, y2 = w.y2;
+                    if (x1 === x2) {
+                        let min = Math.min(y1, y2), max = Math.max(y1, y2);
+                        for (let y = min; y < max; y++) segments.push({ x1: x1, y1: y, x2: x1, y2: y + 1 });
+                    } else if (y1 === y2) {
+                        let min = Math.min(x1, x2), max = Math.max(x1, x2);
+                        for (let x = min; x < max; x++) segments.push({ x1: x, y1: y1, x2: x + 1, y2: y1 });
+                    }
+                });
+
+                let uniqueSegments = [];
+                let seenSegs = new Set();
+                segments.forEach(s => {
+                    let key = `${s.x1},${s.y1}-${s.x2},${s.y2}`;
+                    if (!seenSegs.has(key)) { seenSegs.add(key); uniqueSegments.push(s); }
+                });
+
+                let elMap = {};
+                this.schemaElements.forEach((el, index) => {
+                    let rot = el.rotation || 0;
+                    let isHoriz = Math.abs(Math.cos(rot)) > 0.5;
+                    let uid = `elem_${el.x}_${el.y}`;
+                    elMap[`${el.x},${el.y}`] = Object.assign({}, el, { isHoriz, uid });
+                });
+
+                function getTerminal(x, y, side) {
+                    let el = elMap[`${x},${y}`];
+                    if (!el) return `node_${x}_${y}`;
+                    if (el.isHoriz) {
+                        if (side === 'LEFT') return `${el.uid}_1`;
+                        if (side === 'RIGHT') return `${el.uid}_2`;
+                        return null;
+                    } else {
+                        if (side === 'TOP') return `${el.uid}_1`;
+                        if (side === 'BOTTOM') return `${el.uid}_2`;
+                        return null;
+                    }
+                }
+
+                let adj = {};
+                function addEdge(u, v) {
+                    if (!u || !v) return;
+                    if (!adj[u]) adj[u] = [];
+                    if (!adj[v]) adj[v] = [];
+                    adj[u].push(v);
+                    adj[v].push(u);
+                }
+
+                uniqueSegments.forEach(s => {
+                    if (s.y1 === s.y2) {
+                        addEdge(getTerminal(s.x1, s.y1, 'RIGHT'), getTerminal(s.x2, s.y2, 'LEFT'));
+                    } else {
+                        addEdge(getTerminal(s.x1, s.y1, 'BOTTOM'), getTerminal(s.x2, s.y2, 'TOP'));
+                    }
+                });
+
+                let batteries = Object.values(elMap).filter(e => e.type === 'bat');
+                let lamps = Object.values(elMap).filter(e => e.type === 'lamp');
+                let sws = Object.values(elMap).filter(e => e.type.startsWith('sw'));
+
+                if (batteries.length === 0 || lamps.length === 0 || sws.length === 0)
+                    return { valid: false, reason: "Il manque des composants (pile, lampe ou interrupteur)." };
+
+                let visited = new Set();
+                let compId = 0;
+                let nodeToComp = {};
+                for (let node in adj) {
+                    if (!visited.has(node)) {
+                        compId++;
+                        let q = [node];
+                        visited.add(node);
+                        while (q.length > 0) {
+                            let curr = q.shift();
+                            nodeToComp[curr] = compId;
+                            (adj[curr] || []).forEach(n => {
+                                if (!visited.has(n)) {
+                                    visited.add(n);
+                                    q.push(n);
+                                }
+                            });
+                        }
+                    }
+                }
+
+                let getComp = (node) => {
+                    if (nodeToComp[node]) return nodeToComp[node];
+                    compId++;
+                    nodeToComp[node] = compId;
+                    return compId;
+                };
+
+                let absEdges = [];
+                Object.values(elMap).forEach(el => {
+                    let u = `${el.uid}_1`;
+                    let v = `${el.uid}_2`;
+                    let c1 = getComp(u);
+                    let c2 = getComp(v);
+                    absEdges.push({ el: el, c1: c1, c2: c2 });
+                });
+
+                for (let edge of absEdges) {
+                    if (edge.c1 === edge.c2) {
+                        if (edge.el.type === 'lamp') return { valid: false, reason: "Attention, la lampe est court-circuitée !" };
+                        if (edge.el.type === 'bat') return { valid: false, reason: "Attention, la pile est en court-circuit (danger) !" };
+                    }
+                }
+
+                let netAdj = {};
+                absEdges.forEach(edge => {
+                    if (!netAdj[edge.c1]) netAdj[edge.c1] = [];
+                    if (!netAdj[edge.c2]) netAdj[edge.c2] = [];
+                    netAdj[edge.c1].push({ to: edge.c2, el: edge.el });
+                    netAdj[edge.c2].push({ to: edge.c1, el: edge.el });
+                });
+
+                let validCycleFound = false;
+
+                for (let bat of batteries) {
+                    let batC1 = getComp(`${bat.uid}_1`);
+                    let batC2 = getComp(`${bat.uid}_2`);
+
+                    let dfs = (curr, pathElems) => {
+                        if (validCycleFound) return;
+                        if (curr === batC2) {
+                            let hasL = pathElems.some(e => e.type === 'lamp');
+                            let hasS = pathElems.some(e => e.type.startsWith('sw'));
+                            if (hasL && hasS) {
+                                validCycleFound = true;
+                            }
+                            return;
+                        }
+                        if (!netAdj[curr]) return;
+                        netAdj[curr].forEach(edge => {
+                            if (edge.el.type === 'bat') return;
+                            if (!pathElems.includes(edge.el)) {
+                                dfs(edge.to, [...pathElems, edge.el]);
+                            }
+                        });
+                    };
+
+                    dfs(batC1, []);
+                    if (validCycleFound) break;
+                }
+
+                if (validCycleFound) return { valid: true };
+                return { valid: false, reason: "Le circuit n'est pas correctement fermé en une seule boucle." };
+            }
+
+            checkSchema() {
+                const result = this.analyzeCircuit();
+                if (result.valid) {
+                    this.showSuccess("Schéma Correct !");
+                } else {
+                    alert(result.reason);
+                }
+            }
+
+            showSuccess(msg) {
+                const t = document.getElementById('toast');
+                t.innerText = msg; t.classList.add('show');
+                document.getElementById('btn-next').style.display = 'block';
+                setTimeout(() => t.classList.remove('show'), 3000);
+            }
+
+            renderIcons() {
+                ['bat', 'lamp', 'sw', 'mot'].forEach(id => {
+                    const cvs = document.getElementById('icon-' + id);
+                    if (cvs) {
+                        const type = id === 'sw' ? 'sw_open' : (id === 'mot' ? 'motor' : id);
+                        Draw.symbol.draw(cvs.getContext('2d'), type, 15, 15, 0.8);
+                    }
+                });
+            }
+        }
+
+        const app = new Application();
+
+        document.querySelectorAll('.tool-icon').forEach(el => {
+            el.addEventListener('click', function () {
+                if (this.getAttribute('onclick').includes('check')) return;
+                document.querySelectorAll('.tool-icon').forEach(i => i.classList.remove('active'));
+                this.classList.add('active');
+            });
+        });
+
+        // ---- Standard scaleToFit (CLAUDE.md) ----
+        const DESIGN_W = 1024, DESIGN_H = 640;
+        const wrapper = document.getElementById('sim-wrapper');
+        let userZoom = 1, panX = 0, panY = 0;
+
+        function scaleToFit() {
+            const vw = window.innerWidth, vh = window.innerHeight;
+            const baseScale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+            const totalScale = baseScale * userZoom;
+            wrapper.style.transform = 'translate(' + panX + 'px,' + panY + 'px) scale(' + totalScale + ')';
+            wrapper.style.left = ((vw - DESIGN_W * baseScale) / 2) + 'px';
+            wrapper.style.top = ((vh - DESIGN_H * baseScale) / 2) + 'px';
+        }
+        scaleToFit();
+        window.addEventListener('resize', function () { userZoom = 1; panX = 0; panY = 0; scaleToFit(); });
+
+        // ---- Pinch-to-zoom (mandatory) ----
+        (function () {
+            var pinching = false, lastDist = 0, lastMidX = 0, lastMidY = 0, lastTap = 0;
+            document.addEventListener('touchstart', function (e) {
+                if (e.touches.length === 2) {
+                    e.preventDefault(); pinching = true;
+                    var t1 = e.touches[0], t2 = e.touches[1];
+                    lastDist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                    lastMidX = (t1.clientX + t2.clientX) / 2;
+                    lastMidY = (t1.clientY + t2.clientY) / 2;
+                }
+            }, { passive: false });
+            document.addEventListener('touchmove', function (e) {
+                if (!pinching || e.touches.length !== 2) return;
+                e.preventDefault();
+                var t1 = e.touches[0], t2 = e.touches[1];
+                var dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+                var midX = (t1.clientX + t2.clientX) / 2, midY = (t1.clientY + t2.clientY) / 2;
+                var oldZoom = userZoom;
+                userZoom = Math.max(1, Math.min(5, userZoom * (dist / lastDist)));
+                var vw = window.innerWidth, vh = window.innerHeight;
+                var baseScale = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+                var cx = (vw - DESIGN_W * baseScale) / 2, cy = (vh - DESIGN_H * baseScale) / 2;
+                var ratio = userZoom / oldZoom;
+                panX = panX * ratio + (1 - ratio) * (midX - cx);
+                panY = panY * ratio + (1 - ratio) * (midY - cy);
+                panX += midX - lastMidX; panY += midY - lastMidY;
+                lastDist = dist; lastMidX = midX; lastMidY = midY;
+                scaleToFit();
+            }, { passive: false });
+            document.addEventListener('touchend', function (e) {
+                if (e.touches.length < 2) pinching = false;
+                if (userZoom <= 1.05) { userZoom = 1; panX = 0; panY = 0; scaleToFit(); }
+                if (e.touches.length === 0) {
+                    var now = Date.now();
+                    if (now - lastTap < 300 && userZoom > 1) { userZoom = 1; panX = 0; panY = 0; scaleToFit(); }
+                    lastTap = now;
+                }
+            });
+        })();
+
+    </script>
+</body>
+
+</html>
